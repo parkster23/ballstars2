@@ -1,0 +1,147 @@
+package venturewave.one.gridgames.data.repository
+
+import app.cash.sqldelight.coroutines.asFlow
+import app.cash.sqldelight.coroutines.mapToList
+import app.cash.sqldelight.coroutines.mapToOne
+import app.cash.sqldelight.coroutines.mapToOneOrNull
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
+import venturewave.one.gridgames.database.Database
+import venturewave.one.gridgames.database.GameSessionEntity
+import venturewave.one.gridgames.model.GameResult
+import venturewave.one.gridgames.model.TrainingPattern
+
+/**
+ * Repository for managing game sessions in the database.
+ * Handles saving, retrieving, and querying game results.
+ */
+class GameSessionRepository {
+    private val db = Database.getInstance()
+    private val queries = db.gameSessionEntityQueries
+
+    /**
+     * Save a game result to the database.
+     * Returns the inserted session ID.
+     */
+    suspend fun saveGameResult(
+        result: GameResult,
+        playerId: String = "default_player"
+    ): Long = withContext(Dispatchers.IO) {
+        queries.insertSession(
+            patternId = result.pattern.id,
+            playerId = playerId,
+            score = result.score.toLong(),
+            totalTime = result.totalTime,
+            hitCount = result.hitCount.toLong(),
+            missCount = result.missCount.toLong(),
+            accuracy = result.accuracy.toDouble(),
+            completedAt = System.currentTimeMillis()
+        )
+        // Get the last inserted row ID
+        db.gameSessionEntityQueries.transactionWithResult {
+            db.transacter.lastInsertedRowId()
+        }
+    }
+
+    /**
+     * Get all game sessions as a Flow.
+     */
+    fun getAllSessionsFlow(): Flow<List<GameSessionEntity>> {
+        return queries.getAllSessions()
+            .asFlow()
+            .mapToList(Dispatchers.IO)
+    }
+
+    /**
+     * Get all sessions.
+     */
+    suspend fun getAllSessions(): List<GameSessionEntity> = withContext(Dispatchers.IO) {
+        queries.getAllSessions().executeAsList()
+    }
+
+    /**
+     * Get a session by ID.
+     */
+    suspend fun getSessionById(id: Long): GameSessionEntity? = withContext(Dispatchers.IO) {
+        queries.getSessionById(id).executeAsOneOrNull()
+    }
+
+    /**
+     * Get all sessions for a specific pattern.
+     */
+    suspend fun getSessionsByPattern(patternId: String): List<GameSessionEntity> = withContext(Dispatchers.IO) {
+        queries.getSessionsByPattern(patternId).executeAsList()
+    }
+
+    /**
+     * Get all sessions for a specific player.
+     */
+    suspend fun getSessionsByPlayer(playerId: String = "default_player"): List<GameSessionEntity> = withContext(Dispatchers.IO) {
+        queries.getSessionsByPlayer(playerId).executeAsList()
+    }
+
+    /**
+     * Get the best score for a specific pattern.
+     */
+    suspend fun getBestScoreForPattern(patternId: String): GameSessionEntity? = withContext(Dispatchers.IO) {
+        queries.getBestScoreForPattern(patternId).executeAsOneOrNull()
+    }
+
+    /**
+     * Get best scores for all patterns.
+     */
+    suspend fun getBestScoresForAllPatterns(playerId: String = "default_player") = withContext(Dispatchers.IO) {
+        queries.getBestScoresForAllPatterns(playerId).executeAsList()
+    }
+
+    /**
+     * Get recent sessions for a player.
+     */
+    suspend fun getRecentSessions(
+        playerId: String = "default_player",
+        limit: Long = 10
+    ): List<GameSessionEntity> = withContext(Dispatchers.IO) {
+        queries.getRecentSessions(playerId, limit).executeAsList()
+    }
+
+    /**
+     * Get session stats for a player.
+     */
+    suspend fun getSessionStats(playerId: String = "default_player") = withContext(Dispatchers.IO) {
+        queries.getSessionStats(playerId).executeAsOneOrNull()
+    }
+
+    /**
+     * Get pattern stats for a specific pattern and player.
+     */
+    suspend fun getPatternStats(
+        patternId: String,
+        playerId: String = "default_player"
+    ) = withContext(Dispatchers.IO) {
+        queries.getPatternStats(patternId, playerId).executeAsOneOrNull()
+    }
+
+    /**
+     * Delete a session.
+     */
+    suspend fun deleteSession(id: Long) = withContext(Dispatchers.IO) {
+        queries.deleteSession(id)
+    }
+
+    /**
+     * Delete all sessions for a pattern.
+     */
+    suspend fun deleteSessionsByPattern(patternId: String) = withContext(Dispatchers.IO) {
+        queries.deleteSessionsByPattern(patternId)
+    }
+
+    /**
+     * Delete all sessions.
+     */
+    suspend fun deleteAllSessions() = withContext(Dispatchers.IO) {
+        queries.deleteAllSessions()
+    }
+}

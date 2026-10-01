@@ -1,0 +1,239 @@
+CLAUDE CODE PROMPT — BALLSTARS MAIN MENU (CLEAN ASSET PACK)
+
+IMPORTANT: THIS REPLACES THE PREVIOUS MAIN-MENU ASSET INSTRUCTIONS.
+
+The previous pack used screenshot crops. Do not use those old cropped assets.
+Use ONLY the clean production assets in this pack.
+
+REQUIRED NAVIGATION
+Splash -> PLAY -> Main Menu
+PLAY must ALWAYS navigate to Main Menu.
+
+ASSETS — EXACT PLACEMENT
+
+assets/01_MainMenu_Background.png
+- Render FIRST as the continuous full-screen environment.
+- Modifier.fillMaxSize()
+- ContentScale.Crop
+- Alignment.Center
+- There must be ONE background image only.
+- Do not add separate top/left/right/bottom screenshot strips.
+- Do not add another dark rectangle over the entire background.
+
+assets/02_BallStars_Logo_Transparent.png
+- Transparent BallStars logo.
+- Render near top centre, ABOVE the background.
+- ContentScale.Fit.
+- Approx 65–78% of available screen width.
+- Preserve aspect ratio.
+- Never crop.
+- Do not put it inside another rectangular image/background.
+
+assets/03_Icon_Training.png
+- Transparent green runner icon.
+- Place at left of TRAINING card.
+- Approx 44–52.dp visual size.
+
+assets/04_Icon_GameMode.png
+- Transparent gold trophy.
+- Place at left of GAME MODE card.
+- Approx 44–52.dp visual size.
+
+assets/05_Icon_SetupZone.png
+- Transparent cyan gear.
+- Place at left of SETUP ZONE card.
+- Approx 44–52.dp visual size.
+
+assets/06_Icon_Stats.png
+- Transparent cyan bar-chart icon.
+- Bottom compact Stats action.
+
+assets/07_Icon_Settings.png
+- Transparent cyan settings icon.
+- Bottom compact Settings action.
+
+00_MainMenu_Reference.png
+- Visual comparison ONLY.
+- NEVER render this image in the app.
+
+SCREEN API
+
+@Composable
+fun BallStarsMainMenuScreen(
+    onTraining: () -> Unit,
+    onGameMode: () -> Unit,
+    onSetupZone: () -> Unit,
+    onStats: () -> Unit,
+    onSettings: () -> Unit,
+    modifier: Modifier = Modifier
+)
+
+LAYOUT
+
+Use:
+
+BoxWithConstraints(
+    modifier = modifier.fillMaxSize()
+) {
+    Image(background...)
+    Column(
+        Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .navigationBarsPadding()
+    ) {
+        Logo
+        PrimaryMenuCards
+        StatsSettings
+    }
+}
+
+Do NOT reproduce the broken implementation with:
+- a rectangular header screenshot
+- little square icon screenshots
+- giant empty space below Setup Zone
+- duplicate ghost cards/background panels
+- Stats/Settings pinned against the navigation bar
+
+VERTICAL COMPOSITION
+
+Target portrait phone / Pixel 9.
+
+Header/logo area:
+~18–23% of usable height.
+
+Primary card block:
+Immediately below logo.
+Three cards should form a compact stack occupying roughly the next 38–44%.
+
+Stats/Settings:
+Immediately below the card block with a modest gap.
+Do NOT push them to the very bottom using Spacer(weight = 1f).
+
+Allow remaining lower background artwork to breathe naturally.
+
+Recommended:
+logo bottom -> first card: 12–20.dp
+card gap: 10–14.dp
+Setup Zone -> Stats/Settings: 20–30.dp
+
+PRIMARY CARDS
+
+Build cards natively in Compose. DO NOT use raster card screenshots.
+
+Training:
+title = "TRAINING"
+subtitle = "Practice patterns"
+border/accent = #1ED36A
+icon = 03_Icon_Training.png
+
+Game Mode:
+title = "GAME MODE"
+subtitle = "Test your skills"
+border/accent = #27E6F5
+icon = 04_Icon_GameMode.png
+
+Setup Zone:
+title = "SETUP ZONE"
+subtitle = "Calibrate your grid"
+border/accent = #27E6F5
+icon = 05_Icon_SetupZone.png
+
+Recommended card geometry:
+- width: fillMaxWidth with ~18–24.dp horizontal screen padding
+- height: ~82–94.dp depending on screen height
+- corner radius: 22–26.dp
+- dark navy fill around #08263A / #071F31
+- 3.dp coloured outline
+- subtle coloured glow
+- whole card clickable
+- icon left
+- text column immediately after icon
+- no unnecessary chevron unless already in authoritative reference
+
+Typography:
+- bold white uppercase title
+- pale blue/grey subtitle
+- use existing BallStars heading font if project already contains it
+
+BOTTOM ACTIONS
+
+Create a Row directly below the three cards.
+
+Stats:
+06_Icon_Stats.png
+label "Stats"
+onStats()
+
+Settings:
+07_Icon_Settings.png
+label "Settings"
+onSettings()
+
+They are compact icon+label actions, not cards.
+Approx icon size 36–44.dp.
+Provide generous 48.dp+ touch targets.
+
+BACKGROUND VISIBILITY
+
+The background is intentionally colourful.
+Do not obscure it with a full-screen dark overlay.
+
+If readability requires shading, add only a subtle transparent gradient behind the card region, maximum roughly 15–25% black/navy alpha.
+
+RESOURCE INSTALLATION
+
+Copy these PNGs into the project's Compose Multiplatform resource directory, normally:
+
+composeApp/src/commonMain/composeResources/drawable/
+
+Use the project's actual module/source-set if different.
+
+Load with:
+painterResource(Res.drawable.<resource_name>)
+
+Do not reference /mnt/data or the downloaded ZIP at runtime.
+
+RESPONSIVE RULES
+
+Do not use screenshot pixel coordinates.
+
+On shorter phones:
+1. reduce logo height
+2. reduce gaps
+3. reduce cards toward ~76.dp
+4. reduce icon sizes slightly
+
+Never reduce touch targets below 48.dp.
+Do not hide Stats/Settings.
+Do not crop the logo.
+
+NAVIGATION
+
+Inspect existing navigation routes and reuse them:
+Training -> existing training pattern selection
+Game Mode -> game-mode selection
+Setup Zone -> existing calibration/target detection
+Stats -> existing stats/scores route if present
+Settings -> existing settings route
+
+Change Splash PLAY to Main Menu only.
+
+DO NOT MODIFY
+CameraX, OpenCV, TFLite, grid maths, GridRepository, scoring, training definitions, matches or unrelated screens.
+
+ACCEPTANCE CHECK
+Compare running screen with 00_MainMenu_Reference.png.
+
+Must visibly contain:
+- ONE continuous urban/graffiti background
+- transparent BallStars logo integrated into that background
+- three compact cards with clean transparent icons
+- Training green accent
+- Game Mode cyan accent
+- Setup Zone cyan accent
+- Stats and Settings directly below card stack
+- no rectangular screenshot fragments
+- no giant dead space
+- no duplicate ghost UI
+- Splash PLAY always opens this Main Menu

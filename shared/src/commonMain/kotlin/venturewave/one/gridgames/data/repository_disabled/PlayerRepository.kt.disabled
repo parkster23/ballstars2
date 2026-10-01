@@ -1,0 +1,265 @@
+package venturewave.one.gridgames.data.repository
+
+import app.cash.sqldelight.coroutines.asFlow
+import app.cash.sqldelight.coroutines.mapToList
+import app.cash.sqldelight.coroutines.mapToOneOrNull
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
+import venturewave.one.gridgames.database.Database
+import venturewave.one.gridgames.database.PlayerProfileEntity
+import venturewave.one.gridgames.database.PlayerStatsEntity
+
+/**
+ * Repository for managing player profiles and stats.
+ */
+class PlayerRepository {
+    private val db = Database.getInstance()
+    private val profileQueries = db.playerProfileEntityQueries
+    private val statsQueries = db.playerStatsEntityQueries
+
+    // ===== Player Profile Operations =====
+
+    /**
+     * Get player profile by ID.
+     */
+    suspend fun getProfile(playerId: String = "default_player"): PlayerProfileEntity? = withContext(Dispatchers.IO) {
+        profileQueries.getProfile(playerId).executeAsOneOrNull()
+    }
+
+    /**
+     * Get player profile as Flow.
+     */
+    fun getProfileFlow(playerId: String = "default_player"): Flow<PlayerProfileEntity?> {
+        return profileQueries.getProfile(playerId)
+            .asFlow()
+            .mapToOneOrNull(Dispatchers.IO)
+    }
+
+    /**
+     * Get default player profile.
+     */
+    suspend fun getDefaultProfile(): PlayerProfileEntity? = withContext(Dispatchers.IO) {
+        profileQueries.getDefaultProfile().executeAsOneOrNull()
+    }
+
+    /**
+     * Create or update player profile.
+     */
+    suspend fun createOrUpdateProfile(
+        playerId: String = "default_player",
+        displayName: String,
+        avatar: String? = null,
+        totalScore: Long = 0,
+        totalGamesPlayed: Long = 0,
+        totalTimePlayedMs: Long = 0,
+        favoritePatternId: String? = null,
+        skillLevel: Long = 1
+    ) = withContext(Dispatchers.IO) {
+        val now = System.currentTimeMillis()
+        profileQueries.insertProfile(
+            id = playerId,
+            displayName = displayName,
+            avatar = avatar,
+            totalScore = totalScore,
+            totalGamesPlayed = totalGamesPlayed,
+            totalTimePlayedMs = totalTimePlayedMs,
+            favoritePatternId = favoritePatternId,
+            skillLevel = skillLevel,
+            createdAt = now,
+            updatedAt = now
+        )
+    }
+
+    /**
+     * Update player profile info.
+     */
+    suspend fun updateProfile(
+        playerId: String,
+        displayName: String,
+        avatar: String? = null
+    ) = withContext(Dispatchers.IO) {
+        profileQueries.updateProfile(
+            displayName = displayName,
+            avatar = avatar,
+            updatedAt = System.currentTimeMillis(),
+            id = playerId
+        )
+    }
+
+    /**
+     * Update player stats after a game.
+     */
+    suspend fun updateStatsAfterGame(
+        playerId: String,
+        scoreToAdd: Long,
+        timePlayedMs: Long
+    ) = withContext(Dispatchers.IO) {
+        profileQueries.updateStats(
+            scoreToAdd,
+            timePlayedMs,
+            System.currentTimeMillis(),
+            playerId
+        )
+    }
+
+    /**
+     * Update favorite pattern.
+     */
+    suspend fun updateFavoritePattern(
+        playerId: String,
+        patternId: String
+    ) = withContext(Dispatchers.IO) {
+        profileQueries.updateFavoritePattern(
+            patternId,
+            System.currentTimeMillis(),
+            playerId
+        )
+    }
+
+    /**
+     * Update skill level.
+     */
+    suspend fun updateSkillLevel(
+        playerId: String,
+        skillLevel: Long
+    ) = withContext(Dispatchers.IO) {
+        profileQueries.updateSkillLevel(
+            skillLevel,
+            System.currentTimeMillis(),
+            playerId
+        )
+    }
+
+    /**
+     * Delete player profile.
+     */
+    suspend fun deleteProfile(playerId: String) = withContext(Dispatchers.IO) {
+        profileQueries.deleteProfile(playerId)
+    }
+
+    /**
+     * Initialize default player if not exists.
+     */
+    suspend fun initializeDefaultPlayerIfNeeded() = withContext(Dispatchers.IO) {
+        val existing = profileQueries.getDefaultProfile().executeAsOneOrNull()
+        if (existing == null) {
+            createOrUpdateProfile(
+                playerId = "default_player",
+                displayName = "Player",
+                avatar = null,
+                totalScore = 0,
+                totalGamesPlayed = 0,
+                totalTimePlayedMs = 0,
+                favoritePatternId = null,
+                skillLevel = 1
+            )
+        }
+    }
+
+    // ===== Player Stats Operations =====
+
+    /**
+     * Get all stats for a player.
+     */
+    suspend fun getStatsForPlayer(playerId: String = "default_player"): List<PlayerStatsEntity> = withContext(Dispatchers.IO) {
+        statsQueries.getStatsForPlayer(playerId).executeAsList()
+    }
+
+    /**
+     * Get stats for a specific pattern.
+     */
+    suspend fun getStatsForPattern(
+        playerId: String = "default_player",
+        patternId: String
+    ): PlayerStatsEntity? = withContext(Dispatchers.IO) {
+        statsQueries.getStatsForPattern(playerId, patternId).executeAsOneOrNull()
+    }
+
+    /**
+     * Get stats for a player as Flow.
+     */
+    fun getStatsForPlayerFlow(playerId: String = "default_player"): Flow<List<PlayerStatsEntity>> {
+        return statsQueries.getStatsForPlayer(playerId)
+            .asFlow()
+            .mapToList(Dispatchers.IO)
+    }
+
+    /**
+     * Get top patterns by score.
+     */
+    suspend fun getTopPatternsByScore(
+        playerId: String = "default_player",
+        limit: Long = 5
+    ): List<PlayerStatsEntity> = withContext(Dispatchers.IO) {
+        statsQueries.getTopPatternsByScore(playerId, limit).executeAsList()
+    }
+
+    /**
+     * Get top patterns by games played.
+     */
+    suspend fun getTopPatternsByGamesPlayed(
+        playerId: String = "default_player",
+        limit: Long = 5
+    ): List<PlayerStatsEntity> = withContext(Dispatchers.IO) {
+        statsQueries.getTopPatternsByGamesPlayed(playerId, limit).executeAsList()
+    }
+
+    /**
+     * Get recently played patterns.
+     */
+    suspend fun getRecentlyPlayed(
+        playerId: String = "default_player",
+        limit: Long = 5
+    ): List<PlayerStatsEntity> = withContext(Dispatchers.IO) {
+        statsQueries.getRecentlyPlayed(playerId, limit).executeAsList()
+    }
+
+    /**
+     * Insert or update stats after a game.
+     */
+    suspend fun updateStatsAfterGame(
+        playerId: String,
+        patternId: String,
+        score: Long,
+        time: Long,
+        accuracy: Double,
+        hits: Long,
+        misses: Long
+    ) = withContext(Dispatchers.IO) {
+        statsQueries.insertOrUpdateStats(
+            playerId = playerId,
+            patternId = patternId,
+            gamesPlayed = 1,
+            bestScore = score,
+            totalScore = score,
+            bestTime = time,
+            bestAccuracy = accuracy,
+            totalHits = hits,
+            totalMisses = misses,
+            lastPlayedAt = System.currentTimeMillis()
+        )
+    }
+
+    /**
+     * Delete stats for a pattern.
+     */
+    suspend fun deleteStatsForPattern(patternId: String) = withContext(Dispatchers.IO) {
+        statsQueries.deleteStatsForPattern(patternId)
+    }
+
+    /**
+     * Delete all stats for a player.
+     */
+    suspend fun deleteStatsForPlayer(playerId: String) = withContext(Dispatchers.IO) {
+        statsQueries.deleteStatsForPlayer(playerId)
+    }
+
+    /**
+     * Delete all stats.
+     */
+    suspend fun deleteAllStats() = withContext(Dispatchers.IO) {
+        statsQueries.deleteAllStats()
+    }
+}

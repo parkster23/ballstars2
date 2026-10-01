@@ -1,0 +1,17 @@
+package venturewave.one.gridgames.database
+
+import app.cash.sqldelight.db.SqlDriver
+import app.cash.sqldelight.driver.native.NativeSqliteDriver
+
+/**
+ * iOS implementation of database driver factory.
+ * Uses NativeSqliteDriver for SQLite on iOS.
+ */
+actual class DatabaseDriverFactory {
+    actual fun createDriver(): SqlDriver {
+        return NativeSqliteDriver(
+            schema = BallStarsDatabase.Schema,
+            name = "ballstars.db"
+        )
+    }
+}

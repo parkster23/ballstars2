@@ -1,0 +1,144 @@
+CLAUDE CODE PROMPT — BALLSTARS MAIN MENU
+AUTHORITATIVE REFERENCE: 01_MainMenu_Reference.png
+
+TASK
+Build/rebuild the BallStars Main Menu in Kotlin Compose Multiplatform to match the supplied reference.
+
+NAVIGATION — REQUIRED
+Splash PLAY must ALWAYS navigate to this Main Menu.
+
+Flow:
+Splash -> PLAY -> Main Menu
+
+Do not route Splash PLAY directly to Training, Game Mode, calibration, matches, or another selection screen.
+
+MAIN MENU — EXACT STRUCTURE
+Match the supplied reference. Do NOT add extra large menu tiles.
+
+Top:
+- BallStars logo over the urban/graffiti header artwork.
+
+Primary stacked cards:
+1. TRAINING
+   Subtitle: "Practice patterns"
+   Green accent/glow.
+   Running/training icon.
+   Whole card clickable.
+   Navigate to the existing Training Pattern Selection screen.
+
+2. GAME MODE
+   Subtitle: "Test your skills"
+   Cyan accent/glow.
+   Trophy icon.
+   Whole card clickable.
+   Navigate to the Game Mode selection screen.
+
+3. SETUP ZONE
+   Subtitle: "Calibrate your grid"
+   Cyan/blue accent.
+   Gear/grid setup icon.
+   Whole card clickable.
+   Navigate to the existing grid setup / target detection calibration flow.
+
+Bottom compact actions:
+- Stats
+- Settings
+
+Do NOT add Matches, Stars & Scores, Shop, League, Profile or other primary tiles to this screen unless they already exist inside the Stats/Settings destinations. The supplied reference is authoritative.
+
+COMPOSABLE API
+Create/rework:
+
+@Composable
+fun BallStarsMainMenuScreen(
+    onTraining: () -> Unit,
+    onGameMode: () -> Unit,
+    onSetupZone: () -> Unit,
+    onStats: () -> Unit,
+    onSettings: () -> Unit,
+    modifier: Modifier = Modifier
+)
+
+Use the project's existing navigation conventions and existing routes where they exist. Inspect the navigation graph before adding anything. Do not create duplicate routes/screens.
+
+SPLASH CHANGE
+Find the existing Splash screen PLAY callback and route it to Main Menu.
+
+Conceptually:
+BallStarsSplashScreen(
+    onPlay = { navigateToMainMenu() }
+)
+
+Use the actual route/navigation architecture already present in the project.
+
+PORTRAIT LAYOUT
+This is a PHONE PORTRAIT design. Do not make it wide.
+
+Use BoxWithConstraints / Column and responsive dp/fractional sizing.
+Respect statusBarsPadding() and navigationBarsPadding().
+Do not hard-code absolute screen pixel coordinates.
+
+Reference target: Pixel 9 portrait.
+Also support smaller portrait Android phones.
+
+VISUAL STRUCTURE
+- deep navy base (#07131F family)
+- colourful urban/graffiti border/environment
+- logo prominent near top
+- three large rounded dark-navy cards
+- bright neon borders/glows
+- bold white headings
+- light grey/white subtitles
+- compact Stats and Settings controls at bottom
+- preserve breathing room between cards
+- no unnecessary bottom navigation bar on this screen unless already required by the app architecture
+
+CARDS
+Use native Compose for card containers, text and click targets.
+Recommended:
+- rounded corners: ~20–24.dp
+- minimum touch height: 64.dp; target ~76–88.dp where space allows
+- dark navy interior
+- subtle outer glow
+- icon left
+- heading/subtitle middle
+- entire card clickable
+
+Training accent: BallStars green (#1ED36A family)
+Game Mode accent: scan cyan (#27E6F5 family)
+Setup Zone accent: cyan/blue
+
+BOTTOM ACTIONS
+Stats and Settings should be smaller icon+label actions as shown in the reference, not full-size cards.
+
+RESPONSIVE PRIORITY
+On short screens:
+1. reduce decorative header height slightly
+2. reduce vertical gaps
+3. reduce card height modestly
+4. keep touch targets >=48.dp
+Do not crop the logo or bottom actions.
+
+ASSETS
+01_MainMenu_Reference.png is a visual reference, NOT a flattened production screen.
+Reuse original BallStars logo, urban background, icons and other production assets already in the project where available.
+Do not crop text/buttons from the screenshot and ship them as UI.
+
+ACCESSIBILITY
+All cards and bottom actions require semantic labels and full touch targets.
+Maintain strong contrast.
+
+DO NOT MODIFY
+Do not change CameraX, OpenCV, TFLite, GridRepository, calibration maths, scoring, training definitions, match logic or unrelated screens.
+
+ACCEPTANCE
+- Splash PLAY always goes to Main Menu.
+- Main Menu visually matches 01_MainMenu_Reference.png.
+- Exactly three primary cards: Training, Game Mode, Setup Zone.
+- Stats and Settings are compact bottom actions.
+- Training opens existing pattern-selection flow.
+- Game Mode opens game-mode selection.
+- Setup Zone opens existing calibration flow.
+- Responsive portrait layout.
+- No duplicate routes.
+- No unrelated game logic changes.

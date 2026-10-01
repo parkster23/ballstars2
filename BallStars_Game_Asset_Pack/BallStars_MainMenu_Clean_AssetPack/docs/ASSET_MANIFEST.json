@@ -1,0 +1,13 @@
+{
+  "production_assets": [
+    "01_MainMenu_Background.png",
+    "02_BallStars_Logo_Transparent.png",
+    "03_Icon_Training.png",
+    "04_Icon_GameMode.png",
+    "05_Icon_SetupZone.png",
+    "06_Icon_Stats.png",
+    "07_Icon_Settings.png"
+  ],
+  "reference": "00_MainMenu_Reference.png",
+  "navigation": "Splash -> PLAY -> Main Menu"
+}

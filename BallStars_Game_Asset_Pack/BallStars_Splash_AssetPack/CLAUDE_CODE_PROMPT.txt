@@ -1,0 +1,65 @@
+CLAUDE CODE PROMPT — BALLSTARS SPLASH / START SCREEN
+
+Build the BallStars Splash / Start screen in Kotlin Compose Multiplatform from 00_Splash_Reference.png.
+
+PURPOSE
+This is the main game entry screen, not onboarding. PLAY navigates to the existing selection/play-choice screen.
+
+API
+@Composable
+fun BallStarsSplashScreen(
+    onPlay: () -> Unit,
+    modifier: Modifier = Modifier
+)
+
+DESIGN
+Mobile portrait only. Reproduce the BallStars urban/street-football visual language:
+- full-screen urban court/environment
+- complete BallStars logo prominently in the upper area
+- large football/action artwork through the centre
+- large bright green PLAY button near the bottom
+- no 50/50 or 60/40 split
+- never crop the logo, hero football, or PLAY control
+
+ASSETS
+00_Splash_Reference.png is the visual reference.
+Where original BallStars production assets already exist in the project (logo, hero football/streaks, background), reuse those originals. Do not crop the labels/checkerboard previews from the reference board into the app.
+
+Prefer a native Compose PLAY control matching the reference: green pill, dark/navy PLAY text and triangle, cyan/green glow.
+
+RESPONSIVE COMPOSE
+Use BoxWithConstraints/Box, fillMaxSize(), statusBarsPadding(), navigationBarsPadding(), Alignment, fractional sizing and aspectRatio where useful.
+Do not use absolute screen pixel coordinates.
+Use ContentScale.Crop for expendable environment/background art.
+Use ContentScale.Fit for logo and foreground hero art.
+Never use FillBounds for illustration assets.
+
+Composition guides only:
+- logo: upper ~10–32%
+- hero: ~30–72%
+- PLAY: ~82–94%
+
+On short phones reduce hero size before reducing PLAY. PLAY must remain fully visible above navigation insets.
+
+PLAY
+Approx 72–82% screen width, minimum 56.dp interactive height.
+Click calls onPlay().
+Navigation layer owns routing, e.g. onPlay = { navigateToPlayChoice() }.
+Accessibility description: "Play BallStars".
+
+MOTION
+Restrained only: subtle logo entrance, tiny hero float/scale, slow PLAY glow pulse, press scale ~0.96. Respect reduced motion where available.
+
+PERFORMANCE
+Use Compose Multiplatform resources/painterResource. Do not manually decode bitmaps. Do not modify CameraX, grid calibration, training, matches, scoring, repositories or unrelated navigation.
+
+ACCEPTANCE
+- Portrait BallStars splash/start screen matches reference direction
+- complete logo and hero visible
+- PLAY prominent at bottom and not clipped
+- PLAY calls onPlay()
+- routes to existing selection/play-choice screen
+- responsive on Pixel 9 and smaller portrait phones
+- no unrelated game-logic changes
+
+Implement ONLY this screen.

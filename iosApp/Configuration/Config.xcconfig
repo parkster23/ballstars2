@@ -1,0 +1,7 @@
+TEAM_ID=
+
+PRODUCT_NAME=grid-games-mobile
+PRODUCT_BUNDLE_IDENTIFIER=venturewave.one.gridgames.grid-games-mobile$(TEAM_ID)
+
+CURRENT_PROJECT_VERSION=1
+MARKETING_VERSION=1.0

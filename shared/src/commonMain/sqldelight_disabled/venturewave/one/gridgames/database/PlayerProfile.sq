@@ -1,0 +1,69 @@
+-- Player Profile Table
+-- Stores player information and preferences
+CREATE TABLE PlayerProfileEntity (
+    id TEXT PRIMARY KEY NOT NULL,
+    displayName TEXT NOT NULL,
+    avatar TEXT, -- Resource name or URL for avatar image
+    totalScore INTEGER NOT NULL DEFAULT 0,
+    totalGamesPlayed INTEGER NOT NULL DEFAULT 0,
+    totalTimePlayedMs INTEGER NOT NULL DEFAULT 0, -- Total time in milliseconds
+    favoritePatternId TEXT,
+    skillLevel INTEGER NOT NULL DEFAULT 1, -- 1-5 skill rating
+    createdAt INTEGER NOT NULL, -- Unix timestamp
+    updatedAt INTEGER NOT NULL, -- Unix timestamp
+    FOREIGN KEY (favoritePatternId) REFERENCES TrainingPatternEntity(id) ON DELETE SET NULL
+);
+
+-- Queries
+getProfile:
+SELECT * FROM PlayerProfileEntity
+WHERE id = ?;
+
+getDefaultProfile:
+SELECT * FROM PlayerProfileEntity
+WHERE id = 'default_player';
+
+insertProfile:
+INSERT OR REPLACE INTO PlayerProfileEntity (
+    id,
+    displayName,
+    avatar,
+    totalScore,
+    totalGamesPlayed,
+    totalTimePlayedMs,
+    favoritePatternId,
+    skillLevel,
+    createdAt,
+    updatedAt
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateProfile:
+UPDATE PlayerProfileEntity
+SET displayName = ?,
+    avatar = ?,
+    updatedAt = ?
+WHERE id = ?;
+
+updateStats:
+UPDATE PlayerProfileEntity
+SET totalScore = totalScore + ?,
+    totalGamesPlayed = totalGamesPlayed + 1,
+    totalTimePlayedMs = totalTimePlayedMs + ?,
+    updatedAt = ?
+WHERE id = ?;
+
+updateFavoritePattern:
+UPDATE PlayerProfileEntity
+SET favoritePatternId = ?,
+    updatedAt = ?
+WHERE id = ?;
+
+updateSkillLevel:
+UPDATE PlayerProfileEntity
+SET skillLevel = ?,
+    updatedAt = ?
+WHERE id = ?;
+
+deleteProfile:
+DELETE FROM PlayerProfileEntity
+WHERE id = ?;

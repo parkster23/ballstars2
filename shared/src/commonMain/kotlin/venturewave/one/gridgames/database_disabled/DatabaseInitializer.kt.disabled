@@ -1,0 +1,113 @@
+package venturewave.one.gridgames.database
+
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.launch
+import venturewave.one.gridgames.data.repository.GameSessionRepository
+import venturewave.one.gridgames.data.repository.PlayerRepository
+import venturewave.one.gridgames.data.repository.TrainingPatternRepository
+
+/**
+ * Database initializer that handles:
+ * - Database setup
+ * - Seeding bundled patterns
+ * - Creating default player profile
+ * - Running migrations if needed
+ */
+object DatabaseInitializer {
+
+    private var isInitialized = false
+
+    /**
+     * Initialize the database with a platform-specific driver factory.
+     * This should be called once at app startup.
+     *
+     * @param driverFactory Platform-specific database driver factory
+     */
+    fun initialize(driverFactory: DatabaseDriverFactory) {
+        if (isInitialized) {
+            println("DatabaseInitializer: Already initialized, skipping")
+            return
+        }
+
+        try {
+            // Initialize database singleton
+            Database.initialize(driverFactory)
+
+            // Seed data in background
+            CoroutineScope(Dispatchers.IO).launch {
+                seedInitialData()
+            }
+
+            isInitialized = true
+            println("DatabaseInitializer: Database initialized successfully")
+        } catch (e: Exception) {
+            println("DatabaseInitializer: Failed to initialize database - ${e.message}")
+            throw e
+        }
+    }
+
+    /**
+     * Seed initial data if database is empty.
+     * This includes:
+     * - Bundled training patterns
+     * - Default player profile
+     */
+    private suspend fun seedInitialData() {
+        try {
+            val patternRepo = TrainingPatternRepository()
+            val playerRepo = PlayerRepository()
+
+            // Seed bundled patterns if database is empty
+            println("DatabaseInitializer: Seeding bundled training patterns...")
+            patternRepo.seedBundledPatternsIfNeeded()
+
+            // Create default player profile if it doesn't exist
+            println("DatabaseInitializer: Initializing default player profile...")
+            playerRepo.initializeDefaultPlayerIfNeeded()
+
+            println("DatabaseInitializer: Initial data seeded successfully")
+        } catch (e: Exception) {
+            println("DatabaseInitializer: Failed to seed initial data - ${e.message}")
+            // Don't throw - allow app to continue even if seeding fails
+        }
+    }
+
+    /**
+     * Check if the database is initialized.
+     */
+    fun isInitialized(): Boolean = isInitialized
+
+    /**
+     * Re-seed bundled patterns.
+     * Useful for testing or when patterns are updated.
+     */
+    suspend fun reseedPatterns() {
+        val patternRepo = TrainingPatternRepository()
+        patternRepo.seedBundledPatternsIfNeeded()
+    }
+
+    /**
+     * Clear all data and re-seed.
+     * WARNING: This will delete all user data!
+     */
+    suspend fun resetDatabase() {
+        try {
+            val sessionRepo = GameSessionRepository()
+            val playerRepo = PlayerRepository()
+
+            // Clear all data
+            sessionRepo.deleteAllSessions()
+            playerRepo.deleteAllStats()
+
+            // Re-seed
+            seedInitialData()
+
+            println("DatabaseInitializer: Database reset completed")
+        } catch (e: Exception) {
+            println("DatabaseInitializer: Failed to reset database - ${e.message}")
+            throw e
+        }
+    }
+}

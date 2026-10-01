@@ -1,0 +1,106 @@
+-- Game Session Table
+-- Stores individual game/training sessions
+CREATE TABLE GameSessionEntity (
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    patternId TEXT NOT NULL,
+    playerId TEXT NOT NULL DEFAULT 'default_player',
+    score INTEGER NOT NULL,
+    totalTime INTEGER NOT NULL, -- Milliseconds taken to complete
+    hitCount INTEGER NOT NULL, -- Successful target hits
+    missCount INTEGER NOT NULL, -- Missed targets
+    accuracy REAL NOT NULL, -- Hit percentage (0-100)
+    completedAt INTEGER NOT NULL, -- Unix timestamp in milliseconds
+    FOREIGN KEY (patternId) REFERENCES TrainingPatternEntity(id) ON DELETE CASCADE
+);
+
+-- Index for faster queries by pattern and player
+CREATE INDEX idx_session_pattern ON GameSessionEntity(patternId);
+CREATE INDEX idx_session_player ON GameSessionEntity(playerId);
+CREATE INDEX idx_session_completed ON GameSessionEntity(completedAt);
+
+-- Queries
+getAllSessions:
+SELECT * FROM GameSessionEntity
+ORDER BY completedAt DESC;
+
+getSessionById:
+SELECT * FROM GameSessionEntity
+WHERE id = ?;
+
+getSessionsByPattern:
+SELECT * FROM GameSessionEntity
+WHERE patternId = ?
+ORDER BY completedAt DESC;
+
+getSessionsByPlayer:
+SELECT * FROM GameSessionEntity
+WHERE playerId = ?
+ORDER BY completedAt DESC;
+
+getBestScoreForPattern:
+SELECT * FROM GameSessionEntity
+WHERE patternId = ?
+ORDER BY score DESC, totalTime ASC
+LIMIT 1;
+
+getBestScoresForAllPatterns:
+SELECT
+    patternId,
+    MAX(score) as bestScore,
+    MIN(totalTime) as fastestTime,
+    MAX(accuracy) as bestAccuracy
+FROM GameSessionEntity
+WHERE playerId = ?
+GROUP BY patternId;
+
+getRecentSessions:
+SELECT * FROM GameSessionEntity
+WHERE playerId = ?
+ORDER BY completedAt DESC
+LIMIT ?;
+
+insertSession:
+INSERT INTO GameSessionEntity (
+    patternId,
+    playerId,
+    score,
+    totalTime,
+    hitCount,
+    missCount,
+    accuracy,
+    completedAt
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+deleteSession:
+DELETE FROM GameSessionEntity
+WHERE id = ?;
+
+deleteSessionsByPattern:
+DELETE FROM GameSessionEntity
+WHERE patternId = ?;
+
+deleteAllSessions:
+DELETE FROM GameSessionEntity;
+
+getSessionStats:
+SELECT
+    COUNT(*) as totalSessions,
+    SUM(score) as totalScore,
+    AVG(score) as avgScore,
+    MAX(score) as maxScore,
+    AVG(accuracy) as avgAccuracy,
+    SUM(hitCount) as totalHits,
+    SUM(missCount) as totalMisses
+FROM GameSessionEntity
+WHERE playerId = ?;
+
+getPatternStats:
+SELECT
+    COUNT(*) as totalSessions,
+    AVG(score) as avgScore,
+    MAX(score) as maxScore,
+    AVG(totalTime) as avgTime,
+    MIN(totalTime) as bestTime,
+    AVG(accuracy) as avgAccuracy
+FROM GameSessionEntity
+WHERE patternId = ? AND playerId = ?;

@@ -1,0 +1,153 @@
+package venturewave.one.gridgames.data
+
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.launch
+import venturewave.one.gridgames.data.repository.GameSessionRepository
+import venturewave.one.gridgames.data.repository.PlayerRepository
+import venturewave.one.gridgames.model.GameResult
+
+/**
+ * Manager class for handling game result persistence and player stats updates.
+ * Provides convenient methods to save game results and update player statistics.
+ */
+object GameResultManager {
+
+    private val sessionRepository = GameSessionRepository()
+    private val playerRepository = PlayerRepository()
+
+    /**
+     * Save a game result to the database and update player stats.
+     *
+     * @param result The game result to save
+     * @param playerId The player ID (defaults to "default_player")
+     * @param onSuccess Callback invoked when save is successful
+     * @param onError Callback invoked when save fails with error message
+     */
+    fun saveGameResult(
+        result: GameResult,
+        playerId: String = "default_player",
+        onSuccess: (() -> Unit)? = null,
+        onError: ((String) -> Unit)? = null
+    ) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                // Save game session
+                val sessionId = sessionRepository.saveGameResult(result, playerId)
+
+                // Update player profile stats
+                playerRepository.updateStatsAfterGame(
+                    playerId = playerId,
+                    scoreToAdd = result.score.toLong(),
+                    timePlayedMs = result.totalTime
+                )
+
+                // Update pattern-specific stats
+                playerRepository.updateStatsAfterGame(
+                    playerId = playerId,
+                    patternId = result.pattern.id,
+                    score = result.score.toLong(),
+                    time = result.totalTime,
+                    accuracy = result.accuracy.toDouble(),
+                    hits = result.hitCount.toLong(),
+                    misses = result.missCount.toLong()
+                )
+
+                println("GameResultManager: Saved game result (session ID: $sessionId)")
+                onSuccess?.invoke()
+            } catch (e: Exception) {
+                val errorMessage = "Failed to save game result: ${e.message}"
+                println("GameResultManager: $errorMessage")
+                onError?.invoke(errorMessage)
+            }
+        }
+    }
+
+    /**
+     * Get the best score for a specific pattern.
+     *
+     * @param patternId The pattern ID
+     * @param onResult Callback with the best score (null if no games played)
+     */
+    suspend fun getBestScore(
+        patternId: String,
+        onResult: (Int?) -> Unit
+    ) {
+        try {
+            val bestSession = sessionRepository.getBestScoreForPattern(patternId)
+            onResult(bestSession?.score?.toInt())
+        } catch (e: Exception) {
+            println("GameResultManager: Failed to get best score - ${e.message}")
+            onResult(null)
+        }
+    }
+
+    /**
+     * Get pattern statistics for a player.
+     *
+     * @param patternId The pattern ID
+     * @param playerId The player ID (defaults to "default_player")
+     * @return PatternStats object or null if no stats available
+     */
+    suspend fun getPatternStats(
+        patternId: String,
+        playerId: String = "default_player"
+    ): PatternStats? {
+        return try {
+            val stats = sessionRepository.getPatternStats(patternId, playerId)
+            stats?.let {
+                PatternStats(
+                    totalSessions = it.totalSessions?.toInt() ?: 0,
+                    averageScore = it.avgScore?.toInt() ?: 0,
+                    maxScore = it.maxScore?.toInt() ?: 0,
+                    averageTime = it.avgTime?.toLong() ?: 0L,
+                    bestTime = it.bestTime?.toLong() ?: 0L,
+                    averageAccuracy = it.avgAccuracy?.toFloat() ?: 0f
+                )
+            }
+        } catch (e: Exception) {
+            println("GameResultManager: Failed to get pattern stats - ${e.message}")
+            null
+        }
+    }
+
+    /**
+     * Get recent game sessions for a player.
+     *
+     * @param playerId The player ID (defaults to "default_player")
+     * @param limit Maximum number of sessions to retrieve
+     * @return List of recent sessions
+     */
+    suspend fun getRecentSessions(
+        playerId: String = "default_player",
+        limit: Int = 10
+    ) = sessionRepository.getRecentSessions(playerId, limit.toLong())
+
+    /**
+     * Clear all game history (for testing/reset purposes).
+     * WARNING: This deletes all player data!
+     */
+    suspend fun clearAllHistory() {
+        try {
+            sessionRepository.deleteAllSessions()
+            playerRepository.deleteAllStats()
+            println("GameResultManager: All game history cleared")
+        } catch (e: Exception) {
+            println("GameResultManager: Failed to clear history - ${e.message}")
+            throw e
+        }
+    }
+}
+
+/**
+ * Data class representing pattern statistics.
+ */
+data class PatternStats(
+    val totalSessions: Int,
+    val averageScore: Int,
+    val maxScore: Int,
+    val averageTime: Long,
+    val bestTime: Long,
+    val averageAccuracy: Float
+)

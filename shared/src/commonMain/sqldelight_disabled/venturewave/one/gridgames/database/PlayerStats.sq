@@ -1,0 +1,88 @@
+-- Player Stats Table
+-- Stores detailed stats per pattern per player
+CREATE TABLE PlayerStatsEntity (
+    playerId TEXT NOT NULL,
+    patternId TEXT NOT NULL,
+    gamesPlayed INTEGER NOT NULL DEFAULT 0,
+    bestScore INTEGER NOT NULL DEFAULT 0,
+    totalScore INTEGER NOT NULL DEFAULT 0,
+    bestTime INTEGER NOT NULL DEFAULT 0, -- Milliseconds (0 = not set)
+    bestAccuracy REAL NOT NULL DEFAULT 0.0, -- Percentage
+    totalHits INTEGER NOT NULL DEFAULT 0,
+    totalMisses INTEGER NOT NULL DEFAULT 0,
+    lastPlayedAt INTEGER NOT NULL, -- Unix timestamp
+    PRIMARY KEY (playerId, patternId),
+    FOREIGN KEY (playerId) REFERENCES PlayerProfileEntity(id) ON DELETE CASCADE,
+    FOREIGN KEY (patternId) REFERENCES TrainingPatternEntity(id) ON DELETE CASCADE
+);
+
+-- Index for faster queries
+CREATE INDEX idx_stats_player ON PlayerStatsEntity(playerId);
+CREATE INDEX idx_stats_pattern ON PlayerStatsEntity(patternId);
+CREATE INDEX idx_stats_last_played ON PlayerStatsEntity(lastPlayedAt);
+
+-- Queries
+getStatsForPlayer:
+SELECT * FROM PlayerStatsEntity
+WHERE playerId = ?
+ORDER BY lastPlayedAt DESC;
+
+getStatsForPattern:
+SELECT * FROM PlayerStatsEntity
+WHERE playerId = ? AND patternId = ?;
+
+getTopPatternsByScore:
+SELECT * FROM PlayerStatsEntity
+WHERE playerId = ?
+ORDER BY bestScore DESC
+LIMIT ?;
+
+getTopPatternsByGamesPlayed:
+SELECT * FROM PlayerStatsEntity
+WHERE playerId = ?
+ORDER BY gamesPlayed DESC
+LIMIT ?;
+
+getRecentlyPlayed:
+SELECT * FROM PlayerStatsEntity
+WHERE playerId = ?
+ORDER BY lastPlayedAt DESC
+LIMIT ?;
+
+insertOrUpdateStats:
+INSERT INTO PlayerStatsEntity (
+    playerId,
+    patternId,
+    gamesPlayed,
+    bestScore,
+    totalScore,
+    bestTime,
+    bestAccuracy,
+    totalHits,
+    totalMisses,
+    lastPlayedAt
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(playerId, patternId) DO UPDATE SET
+    gamesPlayed = gamesPlayed + 1,
+    bestScore = CASE WHEN excluded.bestScore > bestScore THEN excluded.bestScore ELSE bestScore END,
+    totalScore = totalScore + excluded.totalScore,
+    bestTime = CASE
+        WHEN bestTime = 0 THEN excluded.bestTime
+        WHEN excluded.bestTime > 0 AND excluded.bestTime < bestTime THEN excluded.bestTime
+        ELSE bestTime
+    END,
+    bestAccuracy = CASE WHEN excluded.bestAccuracy > bestAccuracy THEN excluded.bestAccuracy ELSE bestAccuracy END,
+    totalHits = totalHits + excluded.totalHits,
+    totalMisses = totalMisses + excluded.totalMisses,
+    lastPlayedAt = excluded.lastPlayedAt;
+
+deleteStatsForPattern:
+DELETE FROM PlayerStatsEntity
+WHERE patternId = ?;
+
+deleteStatsForPlayer:
+DELETE FROM PlayerStatsEntity
+WHERE playerId = ?;
+
+deleteAllStats:
+DELETE FROM PlayerStatsEntity;

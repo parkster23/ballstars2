@@ -1,0 +1,154 @@
+CLAUDE CODE PROMPT — BALLSTARS TRAINING PATTERN SELECTION
+
+Rebuild ONE screen in the existing Kotlin Multiplatform / Compose Multiplatform BallStars app:
+TRAINING PATTERN SELECTION.
+
+This is the selection screen BEFORE the individual pattern explainer. When a card is tapped, navigate to the explainer for that selected pattern.
+
+VISUAL DIRECTION
+Use the supplied TrainingPatternSelection assets and match the current BallStars visual language: dark navy, cyan/green/gold/purple neon accents, bold display typography, street-football artwork. Build for modern PHONE PORTRAIT (Pixel 9 / ~20:9 reference), not a wide mock-up.
+
+ASSETS
+00_Training_Pattern_Selection_Reference.png = visual reference only; never render as the whole screen.
+01_Header_Choose_Pattern.png = boy + girl header artwork.
+02–16 = pattern thumbnails.
+17_Arrow_Right.png = chevron reference.
+18_Grid_Empty.png / 19_Grid_Example.png = mini-grid visual references.
+20_Star_Filled.png / 21_Star_Empty.png = rating references.
+22–25 = difficulty-chip references.
+
+CORE GRID
+The grid is always:
+1 2 3
+4 5 6
+7 8 9
+
+
+cd /Users/simonparkhouse/Documents/organisation/venturewave/grid-games/grid-games-mobile && ./gradlew :androidApp:assembleDebug
+OUT
+Reusing configuration cache.
+> Task :shared:androidPreBuild UP-TO-DAT
+
+adb install -r androidApp/build/outputs/apk/debug/androidApp-debug.apk && adb shell am force-stop venturewave.one.gridgames && adb shell am start -n venturewave.one.gridgames/.MainActivity
+OUT
+Performing Streamed Install
+Success
+Starting: Intent { cmp=venturewave.one.gridgames/.MainActivity }
+
+PATTERN DATA
+Sequences, difficulty, score/points and duration are DATA and CONFIGURABLE. Do not hardcode them from the artwork.
+
+Existing examples include:
+Triangles = 5,7,4,5
+The Cruff = 5,4,1,3,5
+Rollers = 1,3,9
+Penguin Feet = 5,4,5
+V's = 5,9,5,8,5,7,5
+
+The catalogue may also contain Box Run, Zig Zag, Cross Pattern, Figure 8, Ladder, Diamond, Spiral, Corner to Centre, Edge to Centre, Combo Flow and future patterns. Patterns may be mirrored/inverted for stronger/weaker foot elsewhere in the game logic.
+
+Before coding inspect and reuse the existing TrainingViewModel, pattern/training model, navigation, theme, typography, resource loading and scaling helpers. Do not create duplicate domain models.
+
+SCREEN STRUCTURE
+Use a portrait Column:
+1. existing safe-area/top navigation with Back
+2. compact `01_Header_Choose_Pattern.png`
+3. native heading: “Select Training Pattern”
+4. native difficulty filter chips: All / Beginner / Intermediate / Advanced
+5. LazyColumn of pattern cards
+
+Do not try to fit all patterns on one viewport; the list must scroll smoothly.
+
+FILTERS
+Prefer native Compose FilterChip-style controls styled to BallStars rather than PNG buttons. Filter the displayed list only. Difficulty categories should come from the existing model/config where possible.
+
+PATTERN CARD
+Create/reuse one component such as:
+@Composable
+fun TrainingPatternCard(
+    pattern: TrainingPatternUiModel,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+)
+
+Each full-width card contains:
+LEFT: square pattern thumbnail.
+MIDDLE: native pattern name, short description, configurable difficulty stars, configurable duration, and configurable score/points if appropriate.
+RIGHT: dynamically drawn 3×3 pattern preview plus right chevron.
+The WHOLE card is clickable.
+
+Do not bake text, difficulty, time, score or sequence into the thumbnail.
+
+THUMBNAIL MAPPING
+Map supplied thumbnails by stable pattern ID/resource key, never list index:
+Triangles -> 02_Thumb_Triangles.png
+Cruff -> 03_Thumb_Cruff.png
+Rollers -> 04_Thumb_Rollers.png
+Penguin Feet -> 05_Thumb_Penguin_Feet.png
+V's -> 06_Thumb_Vs.png
+Box Run -> 07_Thumb_Box_Run.png
+Zig Zag -> 08_Thumb_Zig_Zag.png
+Cross Pattern -> 09_Thumb_Cross_Pattern.png
+Diamond -> 10_Thumb_Diamond.png
+Figure 8 -> 11_Thumb_Figure_8.png
+Ladder -> 12_Thumb_Ladder.png
+Spiral -> 13_Thumb_Spiral.png
+Corner to Centre -> 14_Thumb_Corner_To_Centre.png
+Edge to Centre -> 15_Thumb_Edge_To_Centre.png
+Combo Flow -> 16_Thumb_Combo_Flow.png
+Use an existing fallback image for unknown/new patterns.
+
+DYNAMIC MINI GRID
+Prefer Compose Canvas. Draw a square 3×3 grid with fixed spatial mapping 1..9, then read pattern.sequence and draw nodes + connecting path in sequence order. Use BallStars cyan/gold treatment. This must automatically support new sequences without new PNGs.
+
+DIFFICULTY
+Difficulty is configurable. Build/reuse a native DifficultyStars(rating, maxRating=5) component. Read the value from current state/model. Never infer it from thumbnail colour or the mock-up.
+
+SCORING
+Scores/points are configurable too. Display the value from the model/config if this selection-screen UX exposes scoring. Do not hardcode point values.
+
+CARD ACCENTS
+Cyan/green/gold/purple can provide visual variety, but do NOT make accent colour secretly define difficulty unless that is already an explicit app rule.
+
+NAVIGATION
+On card tap call onPatternSelected(pattern.id) and navigate to that pattern’s explainer. The explainer then shows the selected pattern’s name, sequence, instructions, configurable difficulty/scoring and start action. Do not rebuild the explainer in this task.
+
+RESPONSIVE DIMENSIONS
+Reuse the same dimension logic as Setup, Grid Creator and Play Choice. No screenshot pixel coordinates.
+Use fillMaxWidth, LazyColumn, dp spacing, safe drawing insets and existing scale helpers.
+On shorter phones: reduce header height and decorative spacing first; keep cards comfortably tappable; let chips scroll horizontally if needed. Touch targets >=48dp.
+
+THEME
+Reuse existing tokens:
+bgDeep #07131F
+surface #0E2236
+surfaceRaised #14304A
+outline #1F4A6B
+primaryGreen #1ED36A
+scanCyan #27E6F5
+gold #FFC21A
+textPrimary #FFFFFF
+textMuted #B7C7D6
+
+PERFORMANCE
+LazyColumn with stable key = pattern.id. Avoid expensive allocations during recomposition. Keep Canvas previews lightweight.
+
+ACCESSIBILITY
+All essential information is native Compose text/semantics. A card should expose name, difficulty and relevant duration/score. Images are decorative where native text already conveys meaning.
+
+ACCEPTANCE CRITERIA
+- Compose Multiplatform.
+- Phone portrait layout consistent with BallStars.
+- Boy + girl header.
+- “Select Training Pattern” heading.
+- All/Beginner/Intermediate/Advanced filtering.
+- List comes from ViewModel/domain state, not hardcoded UI data.
+- Smooth LazyColumn.
+- Whole card clickable.
+- Pattern selected by stable ID.
+- Thumbnail + native name/description.
+- Difficulty, score and duration come from configurable data.
+- 3×3 preview generated from sequence using 1-2-3 / 4-5-6 / 7-8-9.
+- New patterns render without redesign.
+- Existing theme/navigation/state conventions reused.
+- This task does NOT redesign the pattern explainer.

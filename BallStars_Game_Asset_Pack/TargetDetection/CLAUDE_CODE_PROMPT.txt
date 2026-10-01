@@ -1,0 +1,171 @@
+CLAUDE CODE PROMPT — BALLSTARS TARGET DETECTION / SET UP THE ZONE
+
+Rebuild the VISUAL LAYOUT of the EXISTING `ScanTargets2Screen` using this TargetDetection asset pack. This is a reskin/refactor, NOT a rewrite of the working calibration feature.
+
+SOURCE OF TRUTH
+Inspect the existing `ScanTargets2Screen` implementation first. Preserve its working behaviour and existing models/repository/navigation.
+
+The existing screen:
+- uses rear CameraX preview
+- configures Preview with AspectRatio.RATIO_4_3
+- uses PreviewView ImplementationMode.COMPATIBLE and ScaleType.FILL_CENTER
+- collects exactly nine manual Offset touches in order:
+  Top Left, Top Middle, Top Right,
+  Middle Left, Center, Middle Right,
+  Bottom Left, Bottom Middle, Bottom Right
+- has zoomRatio with +/- controls and cameraControl.setLinearZoom(...)
+- enables confirmation after 9 touches
+- converts touch positions to GridTarget objects
+- creates CalibratedGrid(targets, zoomRatio)
+- saves with GridRepository.saveGrid(...)
+- calls onGridCalibrated()
+- draws the confirmed Nexus Grid
+- uses a centre target 1.5x the base size
+
+DO NOT change the calibration mathematics, touch order, GridRepository persistence, CalibratedGrid/GridTarget models, navigation callbacks, CameraX lifecycle binding, rear-camera choice, saved zoom behaviour or createGridTargetsFromTouchPositions().
+
+DESIGN GOAL
+The screen must look like a BallStars gameplay viewport:
+BallStars urban environment/frame -> approximately 8–10% visual border -> large central CUT-OUT -> REAL live camera preview -> touch/grid overlays above camera.
+
+The live camera must genuinely remain visible in the middle. Never place opaque illustration over the aperture. The artwork behaves like an arcade/game cabinet surrounding the real camera.
+
+ASSETS
+00_Target_Detection_Reference.png — visual reference only; never render as the screen.
+01_Header_Background.png — BallStars urban environment/frame source.
+02_Camera_Frame.png — aperture/frame visual reference.
+03_Instruction_Box.png — instruction-state reference.
+04_Instruction_Great.png — successful-tap state reference.
+05_Instruction_Complete.png — completed state reference.
+06_Step_Indicators.png — 1–9 progress reference.
+07_Zoom_Control.png — zoom reference.
+08_Grid_Overlay.png — Nexus-grid reference only.
+09_Target_States.png — empty/active/completed marker reference.
+10_Left_Edge.png / 11_Right_Edge.png — optional decorative edge artwork.
+
+Prefer native Compose for text, interactive controls, progress indicators and calibration overlays. PNGs are primarily decorative artwork.
+
+PHONE PORTRAIT
+Reference Pixel 9 / modern ~20:9 portrait.
+Create ~8–10% decorative left/right border, a compact title/progress region, and a very large central camera aperture. The aperture must have a COMPLETE rounded/bevelled cyan frame including its bottom rail. The physical floor grid must be easy to see.
+
+Suggested hierarchy:
+Box(fillMaxSize) {
+  BallStarsFrameArtwork()
+  CameraAperture {
+    CameraPreviewLayer(...)
+    CalibrationCanvas(...)
+  }
+  TopHud(...)
+  CalibrationProgress(...)
+  ZoomControls(...)
+  BottomControls(...)
+}
+
+LAYER ORDER
+1 bgDeep
+2 BallStars environment/frame
+3 REAL CameraPreviewLayer
+4 CalibrationCanvas/touch markers/confirmed grid
+5 aperture edge/glow
+6 HUD/progress/zoom
+7 instruction/control deck
+
+CAMERA / COORDINATES — CRITICAL
+Reuse the existing CameraPreviewLayer and preserve CameraX behaviour. The existing Preview remains 4:3.
+Place CalibrationCanvas INSIDE THE EXACT SAME SIZED Box as the visible CameraPreviewLayer. A smaller visible camera aperture with a full-screen invisible touch canvas is forbidden because touch coordinates would no longer correspond to what the user sees.
+Inspect downstream consumers before changing any coordinate semantics. Preserve saved-grid compatibility.
+
+TOP HUD
+Native Compose compact header:
+Back arrow
+“Set Up The Zone”
+“Tap the 9 grid positions in order”
+Avoid a tall generic Material toolbar if the newer BallStars screens use compact custom headers.
+
+STEP PROGRESS
+Above the aperture render native dynamic circles:
+1 2 3 4 5 6 7 8 9
+future = navy/muted
+current = cyan glow
+completed = green/cyan
+current logical step = touchPositions.size + 1.
+At 9/9 show ready/complete state.
+
+INSTRUCTIONS
+Keep existing logical order. Primary text:
+“Tap position 1” ... “Tap position 9”
+Secondary text:
+“Top left”, “Top middle”, “Top right”, “Middle left”, “Center”, “Middle right”, “Bottom left”, “Bottom middle”, “Bottom right”.
+A brief “Great!” state after a tap is acceptable but must not slow calibration.
+At completion:
+“Grid set!”
+“The Nexus Grid is ready”
+
+TOUCH MARKERS
+The current magenta dots should be visually restyled to BallStars cyan/green targets with subtle glow. Do NOT change the touch list or logic. Do not invent a spatial marker for the next target before the user taps.
+
+CONFIRMED GRID
+Preserve drawNexusGrid() geometry and its larger-centre-target logic. Only reskin: cyan outline, subtle cyan fill, luminous centre markers, restrained glow. The source mathematics are authoritative, not 08_Grid_Overlay.png.
+
+ZOOM
+Retain existing zoomRatio/onZoomIn/onZoomOut/setLinearZoom behaviour. Place a native vertical + / zoom value / - control along the right side of the aperture. >=48dp targets.
+
+BOTTOM CONTROL DECK
+Compact dark BallStars panel beneath or slightly overlapping the complete bottom camera rail.
+Before 9 touches: current instruction + Reset.
+At 9 touches: Reset + Confirm.
+Confirm uses primary green #1ED36A and must remain visible without scrolling.
+
+RESPONSIVE
+Reuse existing BallStars dimension/scaling conventions. No screenshot pixel coordinates. Use safe drawing insets, fillMaxWidth, aspect-aware Box/BoxWithConstraints, dp spacing and existing scale helpers.
+On shorter phones reduce decorative header/gaps/border before reducing camera usability. Keep controls >=48dp.
+
+THEME
+Reuse BallStarsColor, BallStarsShape and BallStarsSpacing.
+Reference:
+BgDeep #07131F
+Surface #0E2236
+SurfaceRaised #14304A
+GlowCyan #27E6F5
+PrimaryGreen #1ED36A
+Gold #FFC21A
+TextPrimary #FFFFFF
+TextSecondary #B7C7D6
+
+REFACTOR, DON'T DUPLICATE
+Start from existing ScanTargets2Screen. Do NOT create ScanTargets3Screen.
+A useful visual decomposition is:
+ScanTargets2Screen
+  TargetDetectionFrame
+    CameraAperture
+      CameraPreviewLayer [existing]
+      CalibrationCanvas [existing]
+  CalibrationProgress
+  ZoomControls [existing behaviour/new skin]
+  InstructionOverlay [existing state/new skin]
+  CalibrationControls [existing callbacks/new skin]
+
+Do NOT add OpenCV, TFLite, image analysis or automatic grid detection. This screen is the existing MANUAL TOUCH CALIBRATION over CameraX preview. Do not confuse it with the separate OpenCV Grid Finder screen.
+
+ACCEPTANCE
+- Existing ScanTargets2Screen refactored, not replaced.
+- CameraX still works; 4:3 Preview configuration retained.
+- Zoom retained.
+- Exactly nine touches and same order.
+- Canvas and visible preview share coordinate space.
+- Existing GridTarget calculation and 1.5x centre geometry retained.
+- GridRepository.saveGrid(...) retained.
+- onBack/onGridCalibrated retained.
+- ~8–10% BallStars decorative frame.
+- Large central live-camera cut-out.
+- Complete rounded/bevelled frame including bottom rail.
+- Nine dynamic step indicators.
+- Native instructions and controls.
+- Reset retained; Confirm at 9/9 in BallStars green.
+- Confirmed Nexus Grid retained.
+- Pixel 9 and smaller portrait support.
+- No OpenCV/TFLite/image-analysis additions.
+- No duplicate repository/models/navigation.
+
+Implement ONLY this screen.

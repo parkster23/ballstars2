@@ -1,0 +1,64 @@
+{
+  "screen": "BallStars Main Menu",
+  "authoritative_reference": "reference/00_MainMenu_Full_Reference.png",
+  "navigation": "Splash -> PLAY -> Main Menu",
+  "assets": [
+    {
+      "file": "01_Header_Logo_Artwork.png",
+      "role": "top visual/header reference"
+    },
+    {
+      "file": "02_Training_Card_Visual.png",
+      "role": "training card visual reference"
+    },
+    {
+      "file": "03_GameMode_Card_Visual.png",
+      "role": "game mode card visual reference"
+    },
+    {
+      "file": "04_SetupZone_Card_Visual.png",
+      "role": "setup zone card visual reference"
+    },
+    {
+      "file": "05_Bottom_Stats_Settings_Visual.png",
+      "role": "bottom actions visual reference"
+    },
+    {
+      "file": "06_Top_Urban_Background.png",
+      "role": "top environment/background"
+    },
+    {
+      "file": "07_Left_Graffiti_Edge.png",
+      "role": "left decorative edge"
+    },
+    {
+      "file": "08_Right_Graffiti_Edge.png",
+      "role": "right decorative edge"
+    },
+    {
+      "file": "09_Bottom_Graffiti_Strip.png",
+      "role": "bottom decorative strip"
+    },
+    {
+      "file": "10_Training_Icon_Reference.png",
+      "role": "training icon reference"
+    },
+    {
+      "file": "11_GameMode_Icon_Reference.png",
+      "role": "game mode icon reference"
+    },
+    {
+      "file": "12_SetupZone_Icon_Reference.png",
+      "role": "setup icon reference"
+    },
+    {
+      "file": "13_Stats_Icon_Reference.png",
+      "role": "stats icon reference"
+    },
+    {
+      "file": "14_Settings_Icon_Reference.png",
+      "role": "settings icon reference"
+    }
+  ],
+  "note": "Raster crops originate from the supplied storyboard. Text/card fragments are visual references; native Compose should own text, interaction and responsive card geometry."
+}

@@ -1,0 +1,14 @@
+platform :ios, '18.2'
+
+target 'iosApp' do
+  use_frameworks!
+
+  # TFLObjectDetector mirrors BallDetectorHelper.kt's Android
+  # org.tensorflow.lite.task.vision.detector.ObjectDetector almost exactly
+  # (same createFromFile+options -> detect(image) -> [category/score/box]
+  # shape) - a much closer, lower-risk port than hand-decoding raw
+  # TFLInterpreter output tensors would be. Ships as a prebuilt
+  # .framework (vendored_frameworks), unlike the plain TensorFlowLiteObjC
+  # pod, which is compiled from source - see IOS_HANDOFF.md.
+  pod 'TensorFlowLiteTaskVision', '~> 0.4.3'
+end

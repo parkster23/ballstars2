@@ -1,0 +1,482 @@
+CLAUDE CODE — BALLSTARS MAIN MENU ASSEMBLY PROMPT
+
+OBJECTIVE
+Build the BallStars Main Menu in Kotlin Compose Multiplatform from this asset pack.
+The authoritative appearance is:
+reference/00_MainMenu_Full_Reference.png
+
+CRITICAL NAVIGATION RULE
+The Splash screen PLAY button ALWAYS opens Main Menu:
+Splash -> PLAY -> Main Menu
+
+Do not route PLAY directly to Training, Game Mode, Setup Zone, Match, or another chooser.
+
+SCREEN CONTENT
+The reference has exactly three large primary menu choices:
+1. TRAINING — "Practice patterns"
+2. GAME MODE — "Test your skills"
+3. SETUP ZONE — "Calibrate your grid"
+
+At the bottom are two small actions:
+- Stats
+- Settings
+
+Do not add other primary tiles.
+
+ASSET USAGE
+The assets folder contains chopped visual components from the supplied reference.
+
+Use:
+06_Top_Urban_Background.png as the decorative upper environment.
+07_Left_Graffiti_Edge.png and 08_Right_Graffiti_Edge.png as decorative side artwork.
+09_Bottom_Graffiti_Strip.png as optional bottom environment texture.
+
+01_Header_Logo_Artwork.png is the visual guide for logo/header placement.
+02_Training_Card_Visual.png
+03_GameMode_Card_Visual.png
+04_SetupZone_Card_Visual.png
+05_Bottom_Stats_Settings_Visual.png
+are card/action visual references.
+
+10–14 are icon reference crops.
+
+IMPORTANT:
+Do NOT simply place the full reference screenshot as a clickable image.
+Do NOT use the cropped card screenshots as the final interactive UI if clean original project assets/icons exist.
+Use native Compose for card surfaces, text, borders, glow, chevrons and click handling.
+Reuse clean BallStars logo/icons/art already present in the project where possible.
+The chopped PNGs define composition, proportions, styling and imagery.
+
+COMPOSABLE
+Implement/rework:
+
+@Composable
+fun BallStarsMainMenuScreen(
+    onTraining: () -> Unit,
+    onGameMode: () -> Unit,
+    onSetupZone: () -> Unit,
+    onStats: () -> Unit,
+    onSettings: () -> Unit,
+    modifier: Modifier = Modifier
+)
+
+ROOT STRUCTURE
+Use a portrait BoxWithConstraints:
+
+BoxWithConstraints(
+    modifier = modifier
+        .fillMaxSize()
+        .background(Color(0xFF07131F))
+) {
+    // decorative artwork
+    // safe-area content
+}
+
+Decorative artwork must never determine click geometry.
+
+Suggested z-order:
+1. deep navy base
+2. urban/graffiti decorative images
+3. optional dark readability gradient
+4. logo/header
+5. native Compose menu cards
+6. Stats / Settings
+
+SAFE AREAS
+Use statusBarsPadding() and navigationBarsPadding().
+Target Pixel 9 portrait, but adapt to smaller Android portrait screens.
+
+Do NOT use fixed pixel coordinates from the reference image.
+Use dp, constraints and proportional sizing.
+
+HEADER
+Recreate the top of the reference:
+- BallStars logo centered/prominent
+- urban skyline/graffiti behind it
+- compact enough to leave room for all cards
+
+If a clean BallStars logo resource already exists, use it with ContentScale.Fit.
+Never crop or stretch the logo.
+
+PRIMARY CARD STACK
+Cards are vertically stacked with small consistent gaps.
+
+Recommended:
+horizontal padding: 16–20.dp
+card height: responsive, normally ~76–88.dp
+corner radius: ~20–24.dp
+internal horizontal padding: ~16.dp
+
+Card structure:
+[icon] [heading + subtitle] [optional subtle chevron]
+
+Whole card is clickable.
+
+TRAINING
+Accent: BallStars green (#1ED36A family)
+Heading: TRAINING
+Subtitle: Practice patterns
+Callback: onTraining()
+
+GAME MODE
+Accent: Scan cyan (#27E6F5 family)
+Heading: GAME MODE
+Subtitle: Test your skills
+Callback: onGameMode()
+
+SETUP ZONE
+Accent: cyan/blue
+Heading: SETUP ZONE
+Subtitle: Calibrate your grid
+Callback: onSetupZone()
+
+CARD VISUAL STYLE
+- dark navy interior
+- bright coloured outline
+- subtle outer neon glow
+- bold white heading
+- pale secondary subtitle
+- icon on left
+- maintain high contrast
+- avoid excessive glow that reduces legibility
+
+If Compose shadow/glow implementation becomes platform-specific, prioritize:
+1. correct border
+2. correct dark card fill
+3. spacing
+4. typography
+over complicated effects.
+
+BOTTOM ACTIONS
+Below the three cards, create a Row:
+Stats                              Settings
+
+Each action is icon above label or icon+label according to available height.
+Callbacks:
+Stats -> onStats()
+Settings -> onSettings()
+
+These are compact actions, NOT additional large cards.
+
+RESPONSIVE VERTICAL LOGIC
+This reference is intentionally narrow/mobile portrait.
+
+Use available maxHeight to tune:
+- header height
+- gaps
+- card height
+
+On shorter phones reduce in this order:
+1. header artwork height
+2. spaces between cards
+3. card vertical padding/card height
+4. bottom-section spacing
+
+Never:
+- crop the logo
+- hide a menu option
+- reduce clickable height below 48.dp
+- turn the design into a scrolling wide/tablet layout merely to make it fit
+
+A LazyColumn is unnecessary on normal phone sizes. Only introduce scrolling as a defensive fallback for very short accessibility/font-scale layouts.
+
+TYPOGRAPHY
+Use the project's existing BallStars display font for headings if available.
+Do not add/download a new font.
+Headings should visually resemble the chunky white headings in the reference.
+Subtitles should be simpler and lighter.
+
+NAVIGATION INTEGRATION
+Inspect the current navigation graph before changing it.
+Reuse existing destinations.
+
+Splash:
+change its onPlay handler to navigate to Main Menu.
+
+Training:
+onTraining -> existing Training Pattern Selection route.
+
+Game Mode:
+onGameMode -> existing Game Mode selection route.
+
+Setup Zone:
+onSetupZone -> existing grid/calibration/target-detection flow.
+
+Stats:
+reuse existing score/stats destination if present.
+
+Settings:
+reuse existing settings destination if present.
+
+Do not create duplicate screens/routes where equivalents already exist.
+
+BACK STACK
+Main Menu is the game hub.
+Follow the app's existing navigation model.
+Avoid stacking duplicate Main Menu instances.
+
+DO NOT TOUCH
+CameraX
+OpenCV
+TFLite
+grid detection/calibration maths
+GridRepository
+training pattern definitions
+scoring
+match mechanics
+unrelated screens
+
+ACCESSIBILITY
+Each full card is a single semantic click target.
+Minimum touch target 48.dp.
+Provide clear content descriptions for icon-only Stats/Settings actions.
+Support font scaling without text clipping.
+
+ACCEPTANCE TEST
+1. Launch Splash.
+2. Tap PLAY.
+3. Main Menu always opens.
+4. Visual structure closely matches 00_MainMenu_Full_Reference.png.
+5. Exactly Training, Game Mode, Setup Zone as primary cards.
+6. Stats and Settings at bottom.
+7. All five actions navigate correctly.
+8. No clipped content on Pixel 9 portrait.
+9. Check one smaller portrait Android device/emulator.
+10. No CameraX/calibration/game-logic regressions.
+
+IMPLEMENT ONLY:
+- Main Menu UI
+- minimal Splash PLAY navigation change
+- route wiring required for these five existing destinations.
+
+IMPORTANT CORRECTION — YOU ARE NOT USING THE SUPPLIED ASSETS
+
+The supplied Main Menu asset pack is not just a colour/style reference.
+
+You MUST assemble the screen using the supplied graphical assets.
+
+Do not create a plain navy screen with only the background image.
+
+The required visual layering is:
+
+ROOT BOX
+│
+├── 06_Top_Urban_Background.png
+│      Top urban/street-football environment.
+│      Anchor TopCenter.
+│      Full screen width.
+│      This sits BEHIND all other content.
+│
+├── 07_Left_Graffiti_Edge.png
+│      Decorative left-hand graffiti frame.
+│      Anchor Start.
+│      It should visually run alongside the menu area.
+│      It must NOT intercept touch events.
+│
+├── 08_Right_Graffiti_Edge.png
+│      Decorative right-hand graffiti frame.
+│      Anchor End.
+│      It should visually run alongside the menu area.
+│      It must NOT intercept touch events.
+│
+├── 09_Bottom_Graffiti_Strip.png
+│      Decorative artwork at bottom of screen.
+│      Anchor BottomCenter.
+│      Behind Stats and Settings.
+│
+├── 01_Header_Logo_Artwork.png
+│      BallStars header/logo artwork.
+│      Anchor TopCenter.
+│      Preserve aspect ratio.
+│      ContentScale.Fit.
+│      Never crop the BallStars logo.
+│
+└── CONTENT COLUMN
+       │
+       ├── TRAINING CARD
+       │     Native Compose rounded card
+       │     green neon border/glow
+       │
+       │     LEFT:
+       │     use 10_Training_Icon_Reference.png
+       │     OR an existing clean equivalent BallStars
+       │     training icon if already available.
+       │
+       │     TEXT:
+       │     TRAINING
+       │     Practice patterns
+       │
+       ├── GAME MODE CARD
+       │     Native Compose rounded card
+       │     cyan neon border/glow
+       │
+       │     LEFT:
+       │     use 11_GameMode_Icon_Reference.png
+       │     OR an existing clean equivalent.
+       │
+       │     TEXT:
+       │     GAME MODE
+       │     Test your skills
+       │
+       ├── SETUP ZONE CARD
+       │     Native Compose rounded card
+       │     cyan/blue border/glow
+       │
+       │     LEFT:
+       │     use 12_SetupZone_Icon_Reference.png
+       │     OR an existing clean equivalent.
+       │
+       │     TEXT:
+       │     SETUP ZONE
+       │     Calibrate your grid
+       │
+       └── BOTTOM ACTION ROW
+             │
+             ├── Stats
+             │     use 13_Stats_Icon_Reference.png
+             │     icon above "Stats"
+             │
+             └── Settings
+                   use 14_Settings_Icon_Reference.png
+                   icon above "Settings"
+
+
+DO NOT DISPLAY:
+
+02_Training_Card_Visual.png
+03_GameMode_Card_Visual.png
+04_SetupZone_Card_Visual.png
+05_Bottom_Stats_Settings_Visual.png
+
+as additional rectangular images.
+
+Those four images show EXACTLY how their corresponding
+Compose components should look.
+
+They are construction references.
+
+Likewise:
+
+reference/00_MainMenu_Full_Reference.png
+
+is the authoritative whole-screen reference and must NOT
+be displayed by the application.
+
+
+IMPORTANT ASSET LOADING
+
+Move/copy all production PNGs that are actually used by the
+screen into the project's Compose Multiplatform resources,
+for example:
+
+composeApp/src/commonMain/composeResources/drawable/
+
+Use the project's actual source-set structure if different.
+
+Then load them with Compose Multiplatform resources:
+
+painterResource(Res.drawable.<asset_name>)
+
+Do NOT leave the PNG files sitting in an external asset-pack
+directory and expect them to appear automatically.
+
+
+EXPECTED COMPOSE LAYERING
+
+Box(
+    Modifier.fillMaxSize()
+) {
+
+    // LAYER 1 — dark base
+    MainMenuBackground()
+
+    // LAYER 2 — environmental artwork
+    MainMenuUrbanArtwork()
+
+    // LAYER 3 — graffiti edge artwork
+    MainMenuGraffitiFrame()
+
+    // LAYER 4 — logo
+    BallStarsHeader()
+
+    // LAYER 5 — interactive UI
+    MainMenuContent()
+}
+
+
+THE ASSETS MUST BE VISIBLE.
+
+When implementation is complete I should visually be able
+to identify:
+
+- the BallStars header/logo artwork
+- the urban court/graffiti environment
+- graffiti artwork along BOTH sides
+- bottom graffiti artwork
+- Training icon
+- Game Mode trophy icon
+- Setup Zone gear icon
+- Stats icon
+- Settings icon
+
+If any of these are absent, the screen is NOT complete.
+
+
+CARD IMPLEMENTATION
+
+Do not use the card-reference PNG as the clickable card.
+
+Instead construct the card in Compose:
+
+Box(
+    modifier = Modifier
+        .fillMaxWidth()
+        .height(...)
+        .border(...)
+        .background(...)
+        .clickable { ... }
+) {
+    Row {
+        Image(icon)
+        Column {
+            Text(title)
+            Text(subtitle)
+        }
+    }
+}
+
+This allows the cards to scale correctly between different
+portrait Android devices.
+
+
+IMPORTANT: IMAGE SIZING
+
+For all decorative artwork:
+
+preserve aspect ratio.
+
+Do NOT use:
+
+ContentScale.FillBounds
+
+Use:
+
+ContentScale.Fit
+
+for logo/icons and:
+
+ContentScale.Crop
+
+where the environmental background needs to bleed.
+
+
+REFERENCE CHECK
+
+Before finishing, compare the running screen against:
+
+reference/00_MainMenu_Full_Reference.png
+
+Do not consider the task complete simply because all
+navigation buttons work.
+
+The screen must visually reproduce the reference composition.

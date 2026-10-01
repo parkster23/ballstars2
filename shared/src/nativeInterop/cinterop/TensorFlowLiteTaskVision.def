@@ -1,0 +1,13 @@
+language = Objective-C
+headers = TensorFlowLiteTaskVision.h
+package = platform.TensorFlowLiteTaskVision
+
+# Path below is absolute to this checkout and WILL need updating if the
+# repo lives at a different path (e.g. after transferring to a cloud Mac -
+# see IOS_HANDOFF.md). Points at what `pod install` populated in
+# iosApp/Pods/TensorFlowLiteTaskVision/ - a single prebuilt universal
+# .framework (static_framework, VALID_ARCHS covers arm64 for both device
+# and simulator), unlike TensorFlowLiteC/TensorFlowLiteObjC which need
+# separate device/simulator slices.
+compilerOpts = -I/Users/simonparkhouse/Documents/organisation/venturewave/grid-games/grid-games-mobile/iosApp/Pods/TensorFlowLiteTaskVision/Frameworks/TensorFlowLiteTaskVision.framework/Headers
+linkerOpts = -framework TensorFlowLiteTaskVision -F/Users/simonparkhouse/Documents/organisation/venturewave/grid-games/grid-games-mobile/iosApp/Pods/TensorFlowLiteTaskVision/Frameworks

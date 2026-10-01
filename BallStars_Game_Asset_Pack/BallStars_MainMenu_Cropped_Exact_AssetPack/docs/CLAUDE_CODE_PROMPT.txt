@@ -1,0 +1,222 @@
+CLAUDE CODE PROMPT — BALLSTARS MAIN MENU (EXACT CROPPED ASSET PACK)
+
+This pack has been rebuilt using DIRECT CROPS from the authoritative Main Menu design.
+Do not replace these with newly invented icons or artwork.
+
+KEY PRINCIPLE
+Use the supplied cropped assets directly.
+Only fill in dynamic text and native click behaviour in Compose.
+
+NAVIGATION RULE
+Splash -> PLAY -> Main Menu
+PLAY must ALWAYS open Main Menu.
+
+FILES AND WHAT THEY ARE
+
+00_MainMenu_Reference.png
+- Full authoritative reference of the target Main Menu.
+- Use only for visual comparison.
+- Never render this whole image in-app.
+
+assets/01_MainMenu_Background_Filled.png
+- This is the MAIN full-screen background.
+- It already contains the correct logo/header environment.
+- It is a direct crop from the original design, with the old menu cards and bottom labels removed/filled.
+- Render this as the FIRST/BOTTOM layer.
+- Do NOT add another top logo image.
+- Do NOT add additional background strips.
+- Do NOT add a second dark full-screen overlay.
+
+assets/02_Training_Card_Base.png
+assets/04_GameMode_Card_Base.png
+assets/06_SetupZone_Card_Base.png
+- These are the exact card base visuals from the initial design.
+- The interior text/icon content has been blanked so Compose can place clean text on top.
+- Render each one as an Image preserving aspect ratio.
+- These ARE the card visuals; do not redraw a different card style.
+
+assets/03_Training_Icon_ExactCrop.png
+assets/05_GameMode_Icon_ExactCrop.png
+assets/07_SetupZone_Icon_ExactCrop.png
+- These are direct crops of the original icon blocks from the design.
+- Render each of them exactly inside the corresponding card.
+- Do not substitute approximated icons.
+
+assets/08_Stats_Icon_ExactCrop.png
+assets/09_Settings_Icon_ExactCrop.png
+- These are direct crops of the bottom action icons from the original design.
+- Use these exact icons for Stats and Settings.
+
+assets/10_StatsSettings_Row_Guide.png
+- Reference-only crop showing the intended Stats/Settings spacing.
+- Do not render this whole image in-app.
+
+assets/11_Header_Reference.png
+- Reference-only crop of the header/logo area.
+- Do not render if you already use 01_MainMenu_Background_Filled.png (which already includes it).
+
+IMPORTANT ASSEMBLY RULE
+Actual rendered screen should be assembled from:
+- 01_MainMenu_Background_Filled.png
+- 02 / 04 / 06 card bases
+- 03 / 05 / 07 card icons
+- 08 / 09 bottom icons
+- native Compose text and click targets
+
+Do not use any other substitute art.
+
+COMPOSABLE API
+
+@Composable
+fun BallStarsMainMenuScreen(
+    onTraining: () -> Unit,
+    onGameMode: () -> Unit,
+    onSetupZone: () -> Unit,
+    onStats: () -> Unit,
+    onSettings: () -> Unit,
+    modifier: Modifier = Modifier
+)
+
+LAYERING
+
+Box(
+    modifier = modifier.fillMaxSize()
+) {
+    // Layer 1
+    Image(01_MainMenu_Background_Filled.png)
+
+    // Layer 2
+    Column(
+        Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .navigationBarsPadding()
+    ) {
+        Spacer(...) // small spacer so cards begin under logo
+        Card stack
+        Stats/Settings row
+    }
+}
+
+BACKGROUND
+Render 01_MainMenu_Background_Filled.png with:
+- Modifier.fillMaxSize()
+- ContentScale.Crop
+- Alignment.Center
+
+Do NOT apply a heavy dark overlay over the whole background.
+At most, if readability requires, apply a very subtle central scrim ONLY behind the card column.
+
+PRIMARY CARD STACK
+You are NOT redrawing the cards from scratch.
+Use the provided base images.
+
+For each of the three main actions:
+1. Create a Box with a fixed width relative to screen (~84–88% width).
+2. Put the card-base image as the background of that Box.
+3. Overlay the exact icon crop on the left.
+4. Overlay native Compose text on top.
+5. Make the whole card clickable.
+
+Suggested proportions:
+- card visual width: 84–88% of screen width
+- card visual height: auto from aspect ratio of supplied image
+- gap between cards: ~10–14.dp
+
+TRAINING CARD
+Base image:
+assets/02_Training_Card_Base.png
+Icon:
+assets/03_Training_Icon_ExactCrop.png
+Text:
+Title: TRAINING
+Subtitle: Practice patterns
+onClick: onTraining()
+
+GAME MODE CARD
+Base image:
+assets/04_GameMode_Card_Base.png
+Icon:
+assets/05_GameMode_Icon_ExactCrop.png
+Text:
+Title: GAME MODE
+Subtitle: Test your skills
+onClick: onGameMode()
+
+SETUP ZONE CARD
+Base image:
+assets/06_SetupZone_Card_Base.png
+Icon:
+assets/07_SetupZone_Icon_ExactCrop.png
+Text:
+Title: SETUP ZONE
+Subtitle: Calibrate your grid
+onClick: onSetupZone()
+
+TEXT POSITIONING WITHIN CARD
+Because the icons are already exact crops, place them near the left edge of the card with padding.
+Then place text to the right of the icon block.
+
+Recommended:
+- card content left padding: ~16.dp
+- icon visual size: around 34–42.dp
+- title left offset begins just after icon block
+- title bold white, uppercase
+- subtitle pale blue/grey
+- vertically centre the content
+
+Do NOT place text too low.
+Do NOT leave the huge dead space seen in the broken version.
+
+STATS / SETTINGS
+Use the bottom icons directly:
+assets/08_Stats_Icon_ExactCrop.png
+assets/09_Settings_Icon_ExactCrop.png
+
+Create a Row under the three cards:
+[Stats]                 [Settings]
+
+Each action:
+- icon image
+- label below: Stats / Settings
+- entire action clickable
+- onStats() / onSettings()
+
+These must sit directly below the card block.
+Do NOT pin them to the bottom nav bar.
+Use assets/10_StatsSettings_Row_Guide.png as a spacing reference only.
+
+RESPONSIVE VERTICAL LAYOUT
+This is a portrait phone layout.
+On shorter phones:
+1. reduce top spacer
+2. reduce card gaps
+3. slightly reduce card width
+4. slightly reduce icon sizes
+
+Do not crop background logo.
+Do not hide Stats/Settings.
+Do not add scrolling unless absolutely necessary for extreme font scaling.
+
+RESOURCES
+Copy all files from assets/ into the app's Compose resources, e.g.:
+composeApp/src/commonMain/composeResources/drawable/
+
+Use the project's real structure if different.
+
+Load with painterResource(Res.drawable.file_name_without_extension)
+
+DO NOT MODIFY
+CameraX, OpenCV, TFLite, calibration maths, GridRepository, training logic, scoring, matches or unrelated screens.
+
+ACCEPTANCE CHECK
+The finished screen must visibly match 00_MainMenu_Reference.png:
+- exact original logo/background look
+- exact original icon look
+- exact card silhouette look
+- three compact cards
+- Stats and Settings directly underneath
+- no duplicated header image
+- no approximate substitute icons
+- no huge empty dead area
+- Splash PLAY always goes to Main Menu

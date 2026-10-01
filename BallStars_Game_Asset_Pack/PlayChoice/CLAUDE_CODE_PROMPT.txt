@@ -1,0 +1,396 @@
+CLAUDE CODE PROMPT — BALLSTARS PLAY CHOICE SCREEN
+
+Implement ONE screen in the existing BallStars Kotlin Multiplatform / Compose Multiplatform app.
+
+PURPOSE
+Ask the player whether they want to:
+1. go through the Setup Steps,
+2. go straight to Training Sessions,
+3. go straight to Matches.
+
+This screen appears after the player has already selected their preferred boy/girl presentation earlier in onboarding. However, THIS choice screen deliberately shows BOTH a boy and a girl in the main hero image to communicate that BallStars is for both.
+
+IMPORTANT
+The supplied concept reference is too wide for a real modern handset.
+DO NOT reproduce its three-column desktop/tablet-like layout.
+
+Build for PHONE PORTRAIT.
+
+Reference handset:
+Pixel 9, approximately 20:9 portrait.
+
+The layout must use the real device width and height and remain responsive.
+
+============================================================
+ASSETS
+============================================================
+
+00_Play_Choice_Reference.png
+    Concept/style reference ONLY. Never display as the whole screen.
+
+01_Hero_Boy_Girl.png
+    Main top hero. Shows both boy and girl.
+
+02_Choice_Setup.png
+03_Choice_Training.png
+04_Choice_Matches.png
+    Visual references/components for the three choices.
+
+05_Icon_Setup_Grid.png
+06_Icon_Training.png
+07_Icon_Matches.png
+    Optional choice imagery if constructing cleaner native cards.
+
+All headings, descriptions and interactive controls should be native Compose UI.
+
+============================================================
+SCREEN API
+============================================================
+
+Create something equivalent to:
+
+@Composable
+fun PlayChoiceScreen(
+    onSetupSteps: () -> Unit,
+    onTraining: () -> Unit,
+    onMatches: () -> Unit,
+    modifier: Modifier = Modifier
+)
+
+Use the project's existing navigation/state architecture if it already defines equivalent callbacks/routes.
+
+Do not introduce a second navigation system.
+
+============================================================
+PORTRAIT LAYOUT
+============================================================
+
+Use a portrait-first layout.
+
+Suggested structure:
+
+Column(
+    Modifier
+        .fillMaxSize()
+        .background(BallStarsColors.bgDeep)
+        .windowInsetsPadding(WindowInsets.safeDrawing)
+) {
+    Hero
+    Heading
+    SupportingText
+    ChoiceList
+}
+
+Unlike the explainer screens, this is a CHOICE screen.
+
+Recommended vertical proportions on a normal Pixel 9 sized handset:
+
+Hero:
+~32–36% of usable height
+
+Heading + intro:
+~12–15%
+
+Three choices:
+remaining ~50–55%
+
+DO NOT force a 50/50 explainer layout onto this screen.
+
+============================================================
+HERO
+============================================================
+
+Use:
+01_Hero_Boy_Girl.png
+
+It must span the available phone width and show BOTH children.
+
+Preserve:
+- boy
+- girl
+- footballs
+- BallStars urban court atmosphere
+
+Do not vertically crop faces/hands/balls.
+
+Use a subject-safe ContentScale treatment.
+
+The hero should blend into bgDeep #07131F at its lower edge if the supplied artwork naturally supports that.
+
+Do not bake screen copy into the hero.
+
+============================================================
+HEADING
+============================================================
+
+Native Compose text:
+
+“How do you want to play?”
+
+Suggested treatment:
+- large, bold
+- white text
+- optionally colour “play?” BallStars green if this can be achieved cleanly with AnnotatedString
+- approximately 28–34sp depending on screen width
+- horizontally centred
+
+Supporting text:
+
+“Go through the setup, or jump straight into training or matches.”
+
+Native Compose text:
+- white or textMuted
+- approximately 15–17sp
+- centred
+- max 2 lines
+
+============================================================
+CHOICE LAYOUT — CRITICAL
+============================================================
+
+DO NOT put the three options side-by-side.
+
+On a phone portrait screen, stack them VERTICALLY.
+
+Use three large horizontal choice cards:
+
+[ icon/image ] [ Setup Steps          > ]
+               [ Set up your grid...    ]
+
+[ icon/image ] [ Training Sessions    > ]
+               [ Practise skills...     ]
+
+[ icon/image ] [ Matches              > ]
+               [ Challenge friends...  ]
+
+Each card should fill the available width.
+
+Suggested:
+- horizontal margin: 20–24dp
+- card height: approximately 92–112dp
+- gap: 12–16dp
+- corner radius: 20–24dp
+- minimum interactive height: 64dp
+
+On very tall screens the cards may be slightly larger.
+
+============================================================
+CHOICE 1 — SETUP
+============================================================
+
+Use:
+05_Icon_Setup_Grid.png
+or the useful visual content from 02_Choice_Setup.png.
+
+Native title:
+“Setup Steps”
+
+Native description:
+“Set up your grid and learn how to play.”
+
+Accent:
+Scan cyan #27E6F5
+
+Click:
+onSetupSteps()
+
+This should navigate to the Setup / Grid Creator explainer flow already being implemented.
+
+============================================================
+CHOICE 2 — TRAINING
+============================================================
+
+Use:
+06_Icon_Training.png
+or 03_Choice_Training.png.
+
+Native title:
+“Training Sessions”
+
+Native description:
+“Practise skills and improve your score.”
+
+Accent:
+Primary green #1ED36A
+
+Click:
+onTraining()
+
+This goes directly to the existing Training flow / training-session selection.
+
+Do not implement Training itself in this task.
+
+============================================================
+CHOICE 3 — MATCHES
+============================================================
+
+Use:
+07_Icon_Matches.png
+or 04_Choice_Matches.png.
+
+Native title:
+“Matches”
+
+Native description:
+“Challenge your friends and compete.”
+
+Accent:
+Use the existing BallStars match accent if one exists.
+If none exists, use a restrained purple derived from the supplied artwork rather than introducing a new global theme colour.
+
+Click:
+onMatches()
+
+This goes directly to the existing Match flow.
+
+Do not implement Matches itself in this task.
+
+============================================================
+REUSABLE CHOICE COMPONENT
+============================================================
+
+Create a small reusable component, e.g.:
+
+@Composable
+private fun PlayChoiceCard(
+    title: String,
+    description: String,
+    image: Painter,
+    accentColor: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+)
+
+Suggested structure:
+
+Surface(
+    onClick = onClick,
+    shape = RoundedCornerShape(22.dp),
+    color = BallStarsColors.surface,
+    border = BorderStroke(1.dp, accentColor.copy(alpha = 0.8f))
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Image(...)
+        Column(Modifier.weight(1f)) {
+            Text(title)
+            Text(description)
+        }
+        Chevron
+    }
+}
+
+Use existing BallStars components if equivalent components already exist.
+
+============================================================
+RESPONSIVE DIMENSION LOGIC
+============================================================
+
+Do NOT hardcode screen pixel coordinates.
+
+Use BoxWithConstraints only if necessary.
+
+Prefer:
+- fillMaxWidth()
+- weight()
+- aspectRatio()
+- dp spacing tokens
+- safe drawing insets
+
+Normal/tall phone:
+Hero ~34%
+Intro ~13%
+Choices ~53%
+
+Short phone:
+1. reduce hero height slightly
+2. reduce vertical gaps
+3. reduce card heights modestly
+4. allow content area to scroll if required
+
+Never solve space pressure by:
+- putting choices side-by-side
+- clipping text
+- cropping children's faces
+- hiding a choice
+- shrinking touch targets below 48dp
+
+============================================================
+THEME
+============================================================
+
+Reuse existing BallStars theme.
+
+Reference colours:
+
+bgDeep        #07131F
+surface       #0E2236
+surfaceRaised #14304A
+outline       #1F4A6B
+primaryGreen  #1ED36A
+scanCyan      #27E6F5
+gold          #FFC21A
+textPrimary   #FFFFFF
+textMuted     #B7C7D6
+
+Do not let Material defaults change the established visual language.
+
+============================================================
+ACCESSIBILITY
+============================================================
+
+Titles/descriptions must be native Text.
+
+Each whole choice card is one clear interactive target.
+
+Provide meaningful semantics, for example:
+“Setup Steps. Set up your grid and learn how to play.”
+
+Decorative hero image:
+contentDescription = null
+
+Choice images may also be decorative if the native title already communicates their meaning.
+
+Touch targets >=48dp.
+
+============================================================
+DO NOT
+============================================================
+
+Do not:
+- copy the wide three-column layout from the concept image
+- display the complete reference PNG
+- add a Next button; the three cards ARE the actions
+- add Setup/Training/Match logic to this screen
+- add camera code
+- add OpenCV
+- add extra onboarding steps
+- invent a new navigation framework
+- use fixed Pixel 9 pixel coordinates
+- hide either the boy or girl from the hero
+- create gender-specific versions of this particular choice screen
+
+============================================================
+ACCEPTANCE CRITERIA
+============================================================
+
+[ ] Compose Multiplatform compatible.
+[ ] Designed for modern PHONE PORTRAIT, not the wide concept ratio.
+[ ] Looks correct on Pixel 9 / ~20:9.
+[ ] Main hero includes both boy and girl.
+[ ] Heading says “How do you want to play?”
+[ ] Supporting text explains setup vs direct play.
+[ ] Three options are STACKED vertically.
+[ ] Setup Steps routes through onSetupSteps().
+[ ] Training Sessions routes through onTraining().
+[ ] Matches routes through onMatches().
+[ ] Uses native Compose text.
+[ ] Uses BallStars existing theme/components.
+[ ] Safe-area aware.
+[ ] Shorter portrait devices remain usable.
+[ ] No Setup, Training or Match business logic is duplicated.
+
+Before implementing, inspect the existing Setup and Grid Creator explainer screens and reuse their theme, spacing, typography, resource loading and navigation conventions.
+
+Implement this choice screen only.

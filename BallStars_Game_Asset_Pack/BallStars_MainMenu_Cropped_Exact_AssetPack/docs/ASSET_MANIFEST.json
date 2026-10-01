@@ -1,0 +1,19 @@
+{
+  "use_directly": [
+    "assets/01_MainMenu_Background_Filled.png",
+    "assets/02_Training_Card_Base.png",
+    "assets/03_Training_Icon_ExactCrop.png",
+    "assets/04_GameMode_Card_Base.png",
+    "assets/05_GameMode_Icon_ExactCrop.png",
+    "assets/06_SetupZone_Card_Base.png",
+    "assets/07_SetupZone_Icon_ExactCrop.png",
+    "assets/08_Stats_Icon_ExactCrop.png",
+    "assets/09_Settings_Icon_ExactCrop.png"
+  ],
+  "reference_only": [
+    "00_MainMenu_Reference.png",
+    "assets/10_StatsSettings_Row_Guide.png",
+    "assets/11_Header_Reference.png"
+  ],
+  "navigation": "Splash -> PLAY -> Main Menu"
+}

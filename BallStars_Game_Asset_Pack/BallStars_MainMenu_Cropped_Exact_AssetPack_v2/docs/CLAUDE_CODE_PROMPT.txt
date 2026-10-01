@@ -1,0 +1,54 @@
+CLAUDE CODE PROMPT — BALLSTARS MAIN MENU (EXACT CROPPED ASSET PACK V2)
+
+This is the corrected version. The blank-filled areas are intentionally flat BallStars theme dark blue.
+
+IMPORTANT COLOR RULE
+The fill color is the BallStars theme dark blue:
+RGB(4, 37, 58)
+Hex approx: #04253A
+
+Do NOT recolor these filled areas.
+Do NOT generate your own substitute fills.
+
+NAVIGATION RULE
+Splash -> PLAY -> Main Menu
+
+USE DIRECTLY
+assets/01_MainMenu_Background_Filled_ThemeBlue.png
+assets/02_Training_Card_Base_ThemeBlue.png
+assets/03_Training_Icon_ExactCrop.png
+assets/04_GameMode_Card_Base_ThemeBlue.png
+assets/05_GameMode_Icon_ExactCrop.png
+assets/06_SetupZone_Card_Base_ThemeBlue.png
+assets/07_SetupZone_Icon_ExactCrop.png
+assets/08_Stats_Icon_ExactCrop.png
+assets/09_Settings_Icon_ExactCrop.png
+
+REFERENCE ONLY
+00_MainMenu_Reference.png
+assets/10_StatsSettings_Row_Guide.png
+assets/11_Header_Reference.png
+
+ASSEMBLY RULES
+- Use 01_MainMenu_Background_Filled_ThemeBlue.png as the ONLY full-screen background.
+- Use 02/04/06 as the exact card visuals.
+- Use 03/05/07 as the exact card icons.
+- Use 08/09 as the exact bottom icons.
+- Add only native Compose text and click handling on top.
+- Do not create replacement cards.
+- Do not add approximate icons.
+- Do not apply a full-screen dark overlay.
+- Keep the filled areas exactly theme dark blue.
+
+Main cards:
+TRAINING / Practice patterns
+GAME MODE / Test your skills
+SETUP ZONE / Calibrate your grid
+
+Bottom actions:
+Stats
+Settings
+
+Stats and Settings should sit directly below the three cards, not pinned to the bottom edge.
+
+All other behaviour and layout guidance is the same as the previous exact-crop pack.

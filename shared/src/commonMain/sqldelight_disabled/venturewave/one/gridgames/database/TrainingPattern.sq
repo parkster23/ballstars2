@@ -1,0 +1,76 @@
+-- Training Pattern Table
+-- Stores all training patterns with configurable sequences
+CREATE TABLE TrainingPatternEntity (
+    id TEXT PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    targetSequence TEXT NOT NULL, -- Comma-separated list of grid positions (e.g., "5,7,4,5")
+    difficultyLevel INTEGER NOT NULL, -- 1-5 difficulty rating
+    estimatedDuration INTEGER NOT NULL, -- Duration in seconds
+    thumbnailResource TEXT, -- Resource name for thumbnail (e.g., "02_Thumb_Triangles.png")
+    accentColor TEXT, -- Hex color for card accent (e.g., "#27E6F5")
+    isCustom INTEGER AS Boolean DEFAULT 0 NOT NULL, -- 0 = bundled, 1 = user-created
+    createdAt INTEGER NOT NULL, -- Unix timestamp in milliseconds
+    updatedAt INTEGER NOT NULL -- Unix timestamp in milliseconds
+);
+
+-- Queries
+getAllPatterns:
+SELECT * FROM TrainingPatternEntity
+ORDER BY isCustom ASC, difficultyLevel ASC, name ASC;
+
+getPatternById:
+SELECT * FROM TrainingPatternEntity
+WHERE id = ?;
+
+getPatternsByDifficulty:
+SELECT * FROM TrainingPatternEntity
+WHERE difficultyLevel = ?
+ORDER BY name ASC;
+
+getBundledPatterns:
+SELECT * FROM TrainingPatternEntity
+WHERE isCustom = 0
+ORDER BY difficultyLevel ASC, name ASC;
+
+getCustomPatterns:
+SELECT * FROM TrainingPatternEntity
+WHERE isCustom = 1
+ORDER BY updatedAt DESC;
+
+insertPattern:
+INSERT OR REPLACE INTO TrainingPatternEntity (
+    id,
+    name,
+    description,
+    targetSequence,
+    difficultyLevel,
+    estimatedDuration,
+    thumbnailResource,
+    accentColor,
+    isCustom,
+    createdAt,
+    updatedAt
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+deletePattern:
+DELETE FROM TrainingPatternEntity
+WHERE id = ?;
+
+updatePattern:
+UPDATE TrainingPatternEntity
+SET name = ?,
+    description = ?,
+    targetSequence = ?,
+    difficultyLevel = ?,
+    estimatedDuration = ?,
+    thumbnailResource = ?,
+    accentColor = ?,
+    updatedAt = ?
+WHERE id = ?;
+
+searchPatterns:
+SELECT * FROM TrainingPatternEntity
+WHERE name LIKE '%' || ? || '%'
+   OR description LIKE '%' || ? || '%'
+ORDER BY isCustom ASC, difficultyLevel ASC, name ASC;

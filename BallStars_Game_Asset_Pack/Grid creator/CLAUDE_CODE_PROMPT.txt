@@ -1,0 +1,367 @@
+CLAUDE CODE PROMPT — BALLSTARS EXPLAINER: GRID CREATOR
+
+Implement ONE new-user explainer screen in the existing BallStars Kotlin Multiplatform / Compose Multiplatform application.
+
+SCREEN
+“Create Your Grid” / Grid Creator.
+
+This screen follows the SAME theme, responsive dimension logic, component structure and visual hierarchy as the existing `SetupStartExplainerScreen`.
+
+Before coding, inspect the existing Setup explainer implementation and REUSE its:
+- scaffold/layout approach
+- spacing/dimension logic
+- typography
+- colours
+- safe-area handling
+- feature-icon component
+- Next CTA
+- onboarding navigation/pager conventions
+
+Do not create a parallel design system.
+
+PURPOSE
+Teach the user that BallStars needs visible physical guides on the floor so the camera can establish the virtual scoring grid.
+
+The physical grid is only a guide. It does NOT need to be a special BallStars mat.
+
+Users can create it using suitable visible markers such as:
+- masking tape indoors
+- chalk outdoors
+- other clear temporary markings/markers that make the grid positions visible
+
+The supplied real-world reference showed masking tape on a green mat. The explainer artwork generalises that concept.
+
+IMPORTANT CONCEPT
+The physical markings help the user and camera establish where the virtual grid/scoring zones are. BallStars then detects the nine target/scoring positions.
+
+Do not imply that users must own a special mat.
+
+============================================================
+LAYOUT
+============================================================
+
+Use the same approximate 50/50 portrait structure as Setup:
+
+TOP ~50%
+Hero illustration.
+
+BOTTOM ~50%
+Native Compose content:
+- step badge
+- heading
+- instruction
+- three icon/caption columns
+- Next button
+
+The 50/50 split is a design intent, not a fixed pixel coordinate.
+
+Use the same responsive behaviour as Setup on short screens.
+
+============================================================
+ASSETS
+============================================================
+
+00_Grid_Creator_Reference.png
+    Visual reference only. Never render this flattened image as the screen.
+
+01_Hero_Grid_Creator.png
+    Preferred hero image.
+
+02_Player_Setting_Grid.png
+    Optional separated player artwork.
+
+03_Phone_Grid_Detected.png
+    Optional phone/detection artwork.
+
+04_Grid_Tape.png
+    Example physical grid made with tape.
+
+05_Grid_Chalk.png
+    Example outdoor chalk grid.
+
+06_Grid_Alternative.png
+    Example alternative visible markers.
+
+07_Grid_Floor.png
+    Stylised grid visual.
+
+08_Number_1.png
+    Number badge artwork supplied for the design treatment.
+    IMPORTANT: if this screen follows Setup as step 2 in the actual app flow,
+    use the correct native/generated step number according to the existing
+    explainer pager rather than incorrectly presenting it as step 1.
+
+09_Heading_Create_Your_Grid.png
+    Heading artwork.
+
+10_Icon_Mark_Grid.png
+11_Icon_Phone_In_View.png
+12_Icon_Detect_9.png
+
+13_Ball.png
+14_Motion_Trail.png
+15_Background_Room.png
+16_Grid_Glow.png
+    Optional composition elements.
+
+============================================================
+HERO
+============================================================
+
+Use `01_Hero_Grid_Creator.png`.
+
+Show:
+- child/player physically marking out the play grid
+- visible tape-style ground markings
+- standalone phone showing the detected virtual grid / target points
+
+The hero must communicate:
+REAL WORLD MARKINGS -> CAMERA -> VIRTUAL GRID
+
+Keep the full relevant action visible.
+Do not aggressively crop hands, grid or phone.
+
+Use the same subject-safe image treatment as Setup.
+
+Do not place instructional text inside the hero.
+
+============================================================
+HEADING
+============================================================
+
+Display the step number and:
+
+“Create Your Grid”
+
+Use `09_Heading_Create_Your_Grid.png` if this matches the existing Setup implementation strategy.
+
+If Setup now renders headings natively, follow Setup instead.
+
+Do not introduce a different heading system.
+
+============================================================
+INSTRUCTION
+============================================================
+
+Render as NATIVE Compose text:
+
+“Use tape, chalk or anything clearly visible on the ground to mark your grid. These markings give you a guide for where your virtual scoring grid will be.”
+
+Keep this text in the project's localisation/resource system.
+
+Suggested styling should inherit from Setup:
+- white
+- approximately 18–20sp
+- medium/semi-bold
+- readable line height
+- left aligned
+
+Do not bake this text into an image.
+
+============================================================
+THREE SUPPORTING FEATURES
+============================================================
+
+Reuse the SAME feature component created for Setup.
+
+Feature 1:
+Asset: `10_Icon_Mark_Grid.png`
+Caption:
+“Mark your grid”
+
+Feature 2:
+Asset: `11_Icon_Phone_In_View.png`
+Caption:
+“Keep the grid in view”
+
+Feature 3:
+Asset: `12_Icon_Detect_9.png`
+Caption:
+“Detect 9 scoring zones”
+
+Use native Compose captions.
+
+Equal-width columns.
+Centred icons/captions.
+Use the same icon sizing and responsive rules as Setup.
+
+============================================================
+OPTIONAL GRID EXAMPLES
+============================================================
+
+Do NOT overcrowd the primary explainer screen.
+
+The pack includes:
+- `04_Grid_Tape.png`
+- `05_Grid_Chalk.png`
+- `06_Grid_Alternative.png`
+
+These demonstrate that the physical guide can be created in different ways.
+
+If there is sufficient space, a small horizontally scrollable example strip may be used.
+
+However, omit this strip on smaller devices rather than shrinking the main instruction or CTA.
+
+The three examples should conceptually mean:
+Tape / Chalk / Other visible markers.
+
+Do not imply that cones or any specific supplied example are required.
+
+============================================================
+NEXT BUTTON
+============================================================
+
+Reuse the EXACT same Next button component/style as Setup.
+
+Do not create another CTA implementation.
+
+Requirements:
+- fill available content width
+- >=56dp height
+- BallStars green #1ED36A
+- white bold “Next”
+- rounded/pill shape
+- safe-area aware
+- calls `onNext()`
+
+============================================================
+COMPOSABLE
+============================================================
+
+Prefer:
+
+@Composable
+fun GridCreatorExplainerScreen(
+    onNext: () -> Unit,
+    modifier: Modifier = Modifier
+)
+
+Reuse common explainer components already introduced by Setup.
+
+For example, if appropriate:
+
+BallStarsExplainerScaffold(
+    hero = { ... },
+    step = ...,
+    heading = ...,
+    instruction = ...,
+    features = ...,
+    onNext = onNext
+)
+
+If Setup has repeated layout code that this screen would duplicate, NOW is a good time to extract a small reusable explainer scaffold.
+
+Do not over-generalise it for hypothetical future screens.
+
+============================================================
+RESPONSIVE RULES
+============================================================
+
+Follow Setup exactly.
+
+Reference handset: Pixel 9.
+
+Normal/tall phone:
+- hero ~50%
+- explanation ~50%
+
+Short phone:
+- slightly reduce hero allocation
+- reduce decorative gaps first
+- preserve heading/instruction/icons/CTA
+- allow explanatory area to scroll if genuinely required
+
+Never clip:
+- the physical grid in the hero
+- heading
+- instruction
+- feature captions
+- Next CTA
+
+Respect status/navigation/gesture insets.
+
+============================================================
+THEME
+============================================================
+
+Use existing BallStars theme values.
+
+Reference:
+bgDeep #07131F
+surface #0E2236
+surfaceRaised #14304A
+outline #1F4A6B
+primaryGreen #1ED36A
+scanCyan #27E6F5
+gold #FFC21A
+textPrimary #FFFFFF
+textMuted #B7C7D6
+
+Cyan represents detection/tracking.
+Green represents successful setup/action.
+
+============================================================
+DO NOT
+============================================================
+
+Do not:
+- implement the actual OpenCV detector here
+- initialise camera processing
+- request camera permission
+- duplicate Grid Finder
+- imply a proprietary physical mat is required
+- tell the user masking tape is mandatory
+- add another toolbar/navigation system
+- redesign the BallStars visual language
+- add cards around everything
+- use Material default purple/blue styling
+- implement later explainer screens
+- hardcode Pixel-specific coordinates
+
+This is an informational onboarding screen.
+
+============================================================
+ACCESSIBILITY
+============================================================
+
+Essential information must be native Compose content.
+
+Use native Text for:
+- instruction
+- feature captions
+- Next
+
+Provide useful content descriptions for meaningful icons if needed.
+
+Decorative hero art may use contentDescription = null.
+
+Interactive targets >=48dp.
+CTA >=56dp.
+
+============================================================
+ACCEPTANCE CRITERIA
+============================================================
+
+[ ] Compose Multiplatform implementation.
+[ ] Visually consistent with SetupStartExplainerScreen.
+[ ] Uses same screen dimension/responsive logic as Setup.
+[ ] Top approximately 50% hero.
+[ ] Bottom approximately 50% explanation.
+[ ] Hero shows physical grid markings and phone-detected virtual grid.
+[ ] Makes clear that tape/chalk/other visible guides can be used.
+[ ] Does not imply a special mat is required.
+[ ] Heading: “Create Your Grid”.
+[ ] Native instruction text exactly:
+    “Use tape, chalk or anything clearly visible on the ground to mark your grid. These markings give you a guide for where your virtual scoring grid will be.”
+[ ] Three feature concepts:
+    “Mark your grid”
+    “Keep the grid in view”
+    “Detect 9 scoring zones”
+[ ] Next CTA reuses Setup button implementation.
+[ ] Next calls onNext().
+[ ] No camera/OpenCV implementation added.
+[ ] Works on Pixel 9 and smaller portrait devices.
+[ ] Important content is not clipped.
+[ ] Only this explainer screen is implemented.
+
+Implement this screen now, using the existing Setup screen as the structural template.

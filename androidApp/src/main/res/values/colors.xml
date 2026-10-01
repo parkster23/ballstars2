@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- BallStars brand colors -->
+    <color name="ballstars_bg_deep">#07131F</color>
+    <color name="ballstars_cyan">#27E6F5</color>
+</resources>

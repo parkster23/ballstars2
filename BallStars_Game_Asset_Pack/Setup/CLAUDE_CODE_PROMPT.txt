@@ -1,0 +1,80 @@
+CLAUDE CODE PROMPT — BALLSTARS EXPLAINER SCREEN 1: SET UP & START
+
+Build only the first new-user explainer screen: “Set up & Start”.
+
+PROJECT
+- Kotlin Multiplatform / Compose Multiplatform.
+- Android first.
+- Follow the existing BallStars design system and navigation patterns.
+- Do not redesign the supplied artwork.
+- Use assets from the `Setup` asset pack.
+- Keep the implementation responsive; Pixel 9 is the reference handset.
+
+SCREEN PURPOSE
+Explain that the player first uses BallStars' existing Grid Finder to define the scoring zones before playing.
+
+VISUAL REFERENCE
+`00_Setup_Reference.png` is the composition reference only.
+Do not render it as the screen. Construct the screen from native Compose UI and the separate assets.
+
+LAYOUT
+1. Edge-to-edge dark BallStars navy screen (#07131F).
+2. Top approximately 50% is the hero image `01_Hero_Setup.png`.
+   - Hero must span the available width.
+   - Preserve the full player, ball and standalone phone.
+   - Do not crop the player's shoes or the ball.
+   - The phone is deliberately NOT on a tripod.
+   - Allow the lower edge of the artwork to blend naturally into the dark navy content region.
+3. Bottom approximately 50% contains the explainer content.
+4. First content row:
+   - green numbered badge `08_Number_1.png`
+   - heading asset `09_Heading_Setup_Start.png`
+   - align vertically as shown in the reference.
+5. Instruction:
+   “Use the grid finder screen to setup your scoring zones.”
+   Prefer native Compose text for accessibility and localisation. `10_Body_Text.png` is a visual reference only.
+6. Beneath the instruction show three equally sized supporting icon columns:
+   - `11_Icon_Find_Area.png` — caption: “Find your play area”
+   - `12_Icon_Position_Phone.png` — caption: “Position your phone”
+   - `13_Icon_Detect_Zones.png` — caption: “Detect your scoring zones”
+   Captions should be native Compose text, centred, white.
+7. Bottom CTA:
+   - large green rounded Next button.
+   - Prefer native Compose Button styled to match `14_Button_Next.png`; use the PNG only if the project intentionally uses image buttons.
+   - minimum height 56dp.
+   - text: “Next”.
+   - respect navigation/gesture safe-area inset.
+8. If the explainer has a pager state, Next advances to explainer screen 2. Otherwise expose an `onNext` callback.
+9. Back/Skip/pager controls should only be included if they already exist in the surrounding onboarding scaffold; do not invent a second navigation system.
+
+IMPLEMENTATION REQUIREMENTS
+- Create a reusable composable, e.g. `SetupStartExplainerScreen`.
+- Separate screen state from presentation.
+- No text should be baked into newly created app UI.
+- Use `stringResource`/project localisation mechanism for all native text.
+- Use `ContentScale.Fit` or an equivalent subject-safe treatment for hero artwork. Never crop vertically just to fill space.
+- Main CTA >=56dp; interactive targets >=48dp.
+- Support smaller Android screens without clipping: make the lower explanatory area scrollable if necessary while keeping the CTA reachable.
+- Preserve BallStars colours: bgDeep #07131F, primary green #1ED36A, text white, muted text #B7C7D6.
+- Do not modify camera/grid-finder logic. This screen only explains it.
+- Do not implement screens 2+ in this task.
+
+ASSET MAPPING
+- 00_Setup_Reference.png — visual reference only
+- 01_Hero_Setup.png — top hero
+- 08_Number_1.png — step badge
+- 09_Heading_Setup_Start.png — heading
+- 11_Icon_Find_Area.png — supporting icon
+- 12_Icon_Position_Phone.png — supporting icon
+- 13_Icon_Detect_Zones.png — supporting icon
+- 14_Button_Next.png — button appearance reference
+- 02_Player.png / 03_Phone.png / 04_Grid_Ground.png / 05_Ball.png / 06_Motion_Trail.png / 07_Background.png — optional component assets if responsive hero reconstruction is preferable.
+
+ACCEPTANCE CRITERIA
+- Screen visually matches the supplied Set up & Start reference.
+- Top half clearly shows player + ball + standalone phone, no tripod.
+- Instruction wording is exactly: “Use the grid finder screen to setup your scoring zones.”
+- Three setup icons are present with native captions.
+- Next button is present and functional.
+- No player/ball vertical cropping.
+- No implementation of later explainer pages.

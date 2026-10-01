@@ -1,0 +1,212 @@
+package venturewave.one.gridgames.data.repository
+
+import app.cash.sqldelight.coroutines.asFlow
+import app.cash.sqldelight.coroutines.mapToList
+import app.cash.sqldelight.coroutines.mapToOneOrNull
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
+import venturewave.one.gridgames.database.Database
+import venturewave.one.gridgames.database.TrainingPatternEntity
+import venturewave.one.gridgames.model.TrainingPattern
+
+/**
+ * Repository for managing training patterns in the database.
+ * Provides CRUD operations and mapping between database entities and domain models.
+ */
+class TrainingPatternRepository {
+    private val db = Database.getInstance()
+    private val queries = db.trainingPatternEntityQueries
+
+    /**
+     * Get all training patterns as a Flow.
+     */
+    fun getAllPatternsFlow(): Flow<List<TrainingPattern>> {
+        return queries.getAllPatterns()
+            .asFlow()
+            .mapToList(Dispatchers.IO)
+            .map { entities -> entities.map { it.toDomainModel() } }
+    }
+
+    /**
+     * Get all training patterns.
+     */
+    suspend fun getAllPatterns(): List<TrainingPattern> = withContext(Dispatchers.IO) {
+        queries.getAllPatterns().executeAsList().map { it.toDomainModel() }
+    }
+
+    /**
+     * Get a pattern by ID.
+     */
+    suspend fun getPatternById(id: String): TrainingPattern? = withContext(Dispatchers.IO) {
+        queries.getPatternById(id).executeAsOneOrNull()?.toDomainModel()
+    }
+
+    /**
+     * Get a pattern by ID as a Flow.
+     */
+    fun getPatternByIdFlow(id: String): Flow<TrainingPattern?> {
+        return queries.getPatternById(id)
+            .asFlow()
+            .mapToOneOrNull(Dispatchers.IO)
+            .map { it?.toDomainModel() }
+    }
+
+    /**
+     * Get patterns by difficulty level.
+     */
+    suspend fun getPatternsByDifficulty(level: Int): List<TrainingPattern> = withContext(Dispatchers.IO) {
+        queries.getPatternsByDifficulty(level.toLong()).executeAsList().map { it.toDomainModel() }
+    }
+
+    /**
+     * Get bundled (non-custom) patterns.
+     */
+    suspend fun getBundledPatterns(): List<TrainingPattern> = withContext(Dispatchers.IO) {
+        queries.getBundledPatterns().executeAsList().map { it.toDomainModel() }
+    }
+
+    /**
+     * Get custom (user-created) patterns.
+     */
+    suspend fun getCustomPatterns(): List<TrainingPattern> = withContext(Dispatchers.IO) {
+        queries.getCustomPatterns().executeAsList().map { it.toDomainModel() }
+    }
+
+    /**
+     * Insert or update a training pattern.
+     */
+    suspend fun insertPattern(
+        pattern: TrainingPattern,
+        thumbnailResource: String? = null,
+        accentColor: String? = null,
+        isCustom: Boolean = false
+    ) = withContext(Dispatchers.IO) {
+        val now = System.currentTimeMillis()
+        queries.insertPattern(
+            id = pattern.id,
+            name = pattern.name,
+            description = pattern.description,
+            targetSequence = pattern.targetSequence.joinToString(","),
+            difficultyLevel = pattern.difficultyLevel.toLong(),
+            estimatedDuration = pattern.estimatedDuration.toLong(),
+            thumbnailResource = thumbnailResource,
+            accentColor = accentColor,
+            isCustom = if (isCustom) 1L else 0L,
+            createdAt = now,
+            updatedAt = now
+        )
+    }
+
+    /**
+     * Update an existing pattern.
+     */
+    suspend fun updatePattern(
+        id: String,
+        name: String,
+        description: String,
+        targetSequence: List<Int>,
+        difficultyLevel: Int,
+        estimatedDuration: Int,
+        thumbnailResource: String? = null,
+        accentColor: String? = null
+    ) = withContext(Dispatchers.IO) {
+        queries.updatePattern(
+            name = name,
+            description = description,
+            targetSequence = targetSequence.joinToString(","),
+            difficultyLevel = difficultyLevel.toLong(),
+            estimatedDuration = estimatedDuration.toLong(),
+            thumbnailResource = thumbnailResource,
+            accentColor = accentColor,
+            updatedAt = System.currentTimeMillis(),
+            id = id
+        )
+    }
+
+    /**
+     * Delete a pattern.
+     */
+    suspend fun deletePattern(id: String) = withContext(Dispatchers.IO) {
+        queries.deletePattern(id)
+    }
+
+    /**
+     * Search patterns by name or description.
+     */
+    suspend fun searchPatterns(query: String): List<TrainingPattern> = withContext(Dispatchers.IO) {
+        queries.searchPatterns(query, query).executeAsList().map { it.toDomainModel() }
+    }
+
+    /**
+     * Seed the database with bundled patterns if empty.
+     */
+    suspend fun seedBundledPatternsIfNeeded() = withContext(Dispatchers.IO) {
+        val existingPatterns = queries.getAllPatterns().executeAsList()
+        if (existingPatterns.isEmpty()) {
+            // Seed with bundled patterns
+            TrainingPattern.getBundledPatterns().forEach { pattern ->
+                insertPattern(
+                    pattern = pattern,
+                    thumbnailResource = getThumbnailResourceForPattern(pattern.id),
+                    accentColor = getAccentColorForPattern(pattern.id),
+                    isCustom = false
+                )
+            }
+        }
+    }
+
+    /**
+     * Map thumbnail resources to pattern IDs.
+     */
+    private fun getThumbnailResourceForPattern(patternId: String): String {
+        return when (patternId) {
+            "triangles" -> "02_Thumb_Triangles.png"
+            "the_cruff" -> "03_Thumb_Cruff.png"
+            "rollers" -> "04_Thumb_Rollers.png"
+            "penguin_feet" -> "05_Thumb_Penguin_Feet.png"
+            "vs" -> "06_Thumb_Vs.png"
+            "box_run" -> "07_Thumb_Box_Run.png"
+            "zig_zag" -> "08_Thumb_Zig_Zag.png"
+            "cross_pattern" -> "09_Thumb_Cross_Pattern.png"
+            "diamond" -> "10_Thumb_Diamond.png"
+            "figure_8" -> "11_Thumb_Figure_8.png"
+            "ladder" -> "12_Thumb_Ladder.png"
+            "spiral" -> "13_Thumb_Spiral.png"
+            "corner_to_centre" -> "14_Thumb_Corner_To_Centre.png"
+            "edge_to_centre" -> "15_Thumb_Edge_To_Centre.png"
+            "combo_flow" -> "16_Thumb_Combo_Flow.png"
+            else -> "18_Grid_Empty.png" // Fallback
+        }
+    }
+
+    /**
+     * Map accent colors to pattern IDs (BallStars theme colors).
+     */
+    private fun getAccentColorForPattern(patternId: String): String {
+        return when (patternId) {
+            "triangles", "cross_pattern", "penguin_feet" -> "#27E6F5" // Cyan
+            "the_cruff", "vs", "diamond" -> "#1ED36A" // Green
+            "rollers", "box_run", "edge_to_centre" -> "#FFC21A" // Gold
+            "zig_zag", "corner_to_centre" -> "#B794F6" // Purple
+            "figure_8", "ladder", "spiral", "combo_flow" -> "#27E6F5" // Cyan
+            else -> "#27E6F5" // Default cyan
+        }
+    }
+}
+
+/**
+ * Extension function to convert database entity to domain model.
+ */
+private fun TrainingPatternEntity.toDomainModel(): TrainingPattern {
+    return TrainingPattern(
+        id = id,
+        name = name,
+        description = description,
+        targetSequence = targetSequence.split(",").map { it.toInt() },
+        difficultyLevel = difficultyLevel.toInt(),
+        estimatedDuration = estimatedDuration.toInt()
+    )
+}

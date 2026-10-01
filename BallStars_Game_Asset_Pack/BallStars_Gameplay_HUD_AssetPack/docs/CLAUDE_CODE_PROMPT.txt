@@ -1,0 +1,409 @@
+CLAUDE CODE PROMPT — BALLSTARS LIVE GAME / TRAINING HUD
+KOTLIN COMPOSE MULTIPLATFORM + EXISTING ANDROID CAMERA IMPLEMENTATION
+
+GOAL
+Rebuild the existing live BallStars game/training screen to match `00_Gameplay_Screen_Reference.png`.
+
+This is a VISUAL / UI refactor around the existing game logic.
+Do not replace CameraX, ball detection, calibrated-grid coordinates, training-pattern logic, hit/miss logic, repositories or navigation.
+
+IMPORTANT BACKGROUND RULE
+Find the exact background image/resource already used by the current Target Detection / “Set Up The Zone” screen.
+USE THAT SAME RESOURCE.
+Do not add a new background PNG from this pack.
+The whole gameplay screen should feel like the Target Detection screen evolved into live play.
+
+============================================================
+ASSET MAP — WHAT TO USE AND WHERE
+============================================================
+
+REFERENCE ONLY:
+`00_Gameplay_Screen_Reference.png`
+- Whole-screen target design.
+- Never render as a flattened runtime screen.
+
+`assets/01_Pattern_Header_Reference.png`
+- Style/spacing reference for the compact pattern header.
+- Build header text/progress natively in Compose.
+
+`assets/02_Camera_Aperture_Reference.png`
+- Style reference for camera proportion, rounded cyan frame, grid visual hierarchy.
+- Do NOT render as the camera. The real CameraX preview goes here.
+
+`assets/03_Game_HUD_Reference.png`
+- Style/spacing reference for the bottom ~30% HUD.
+- Build the HUD natively so all values remain dynamic.
+
+`assets/13_Progress_Strip_Reference.png`
+- Reference for the thin progress strip. Prefer a native Compose implementation driven by pattern progress.
+
+`assets/14_Active_Target_Style_Reference.png`
+- Visual reference for the current target: bright green/cyan concentric glow.
+- Recreate this in Compose Canvas; do not stamp the PNG at runtime.
+
+`assets/15_Idle_Node_Style_Reference.png`
+- Visual reference for inactive grid nodes.
+- Recreate in Compose Canvas.
+
+DIRECT RUNTIME IMAGE ASSETS:
+`assets/04_Pause_Button_Exact.png`
+- Use as the visual for the pause control at upper-right of the gameplay camera/header.
+- Put a Compose click target around/over it (>=48.dp).
+- `onClick` enters PAUSED state.
+- Preserve aspect ratio; do not recolour.
+
+`assets/05_Play_Button_Matched.png`
+- Use for START / RESUME where the circular control style is appropriate.
+- This is derived from the exact pause visual so PLAY and PAUSE look like one family.
+- Put a Compose click target around/over it.
+
+`assets/06_Training_Icon_Exact.png`
+- Put at the left of the compact pattern header.
+
+`assets/07_Timer_Icon_Exact.png`
+- Put in TIME block in the bottom HUD.
+
+`assets/08_Score_Trophy_Icon_Exact.png`
+- Put in SCORE block.
+
+`assets/09_Streak_Flame_Icon_Exact.png`
+- Put in STREAK block.
+
+`assets/10_LastHit_Target_Icon_Exact.png`
+- Put in LAST HIT block.
+
+`assets/11_Star_Icon_Exact.png`
+- Use for earned-star visuals. Repeat/tint only if required by the current star state.
+
+`assets/12_Combo_Lightning_Icon_Exact.png`
+- Put in COMBO block.
+
+Do not substitute these with newly approximated icons unless the project already contains the exact original clean production equivalent.
+
+============================================================
+SCREEN STRUCTURE — 70 / 30
+============================================================
+
+PHONE PORTRAIT.
+
+Approximately:
+- upper 68–72%: camera/gameplay
+- lower 28–32%: game HUD
+
+Use BoxWithConstraints; do not use screenshot pixel coordinates.
+
+Root:
+Box(fillMaxSize) {
+    ExistingTargetDetectionBackground()
+
+    Column(
+        fillMaxSize()
+        + safe insets
+    ) {
+        GameCameraSection(weight ~0.70)
+        GameHud(weight ~0.30)
+    }
+}
+
+The Target Detection background remains visible around the aperture and HUD.
+
+============================================================
+COMPACT GAME HEADER
+============================================================
+
+Above/over the camera use a compact rounded dark-navy header similar to reference:
+
+LEFT
+- `06_Training_Icon_Exact.png`
+
+CENTRE
+- selected pattern name, e.g. `TRIANGLES`
+- use current pattern.name, never hardcode a footballer name
+
+PROGRESS
+- current step / pattern length, e.g. `2 / 4`
+- optionally small dots driven by sequence progress
+
+RIGHT
+- exact `04_Pause_Button_Exact.png`
+
+Keep header compact so camera remains dominant.
+
+============================================================
+CAMERA APERTURE
+============================================================
+
+Reuse the same architecture already established in Target Detection.
+
+Camera and gameplay Canvas must share EXACT bounds:
+
+CameraAperture
+    CameraPreviewLayer
+    GameplayGridOverlay
+    BallDetectionOverlay (only if currently required)
+    transient hit/miss effects
+
+Use rounded cyan border around the aperture.
+Target approximately 8–10% horizontal screen framing, but responsive.
+
+The camera must remain real CameraX content.
+Never overlay an opaque illustration over it.
+
+============================================================
+GRID — COMPOSE CANVAS, NOT AN IMAGE
+============================================================
+
+Draw the grid from the calibrated `GridTarget` / calibrated positions.
+
+Spatial numbering:
+1 2 3
+4 5 6
+7 8 9
+
+Visual connectivity should follow the square / cross / diagonal structure shown in the design and current setup geometry.
+
+The Canvas must derive its geometry from the calibrated grid.
+No fixed screenshot coordinates.
+
+IDLE LINES:
+- cyan `#27E6F5`
+- low alpha ~0.30–0.45
+- thin, clean AR-style lines
+
+IDLE NODES:
+- match `15_Idle_Node_Style_Reference.png`
+- cyan translucent ring
+- bright small center
+- subtle glow
+
+ACTIVE TARGET:
+- match `14_Active_Target_Style_Reference.png`
+- concentric green/cyan rings
+- stronger outer glow
+- bright centre
+- breathing animation ~1200–1500ms
+
+Only the active target should be highly luminous.
+
+============================================================
+GAME PHASES
+============================================================
+
+Use/reuse existing state architecture. UI conceptually needs:
+
+TIME_SELECTION
+COUNTDOWN
+ACTIVE
+PAUSED
+COMPLETE
+
+Do not duplicate an existing equivalent game-state model.
+
+TIME_SELECTION:
+- show camera/grid live
+- bottom HUD becomes time selector
+- options: `30 SEC` and `60 SEC` only
+- selected option uses green treatment
+- use `05_Play_Button_Matched.png` as the START visual
+- START stores selected duration and enters countdown
+
+COUNTDOWN:
+- camera/grid remain visible
+- no scoring
+- centre overlay counts 10, 9, ... 1
+- then `GO!`
+- use a Compose-drawn circular cyan/green ring matching the play/pause/active-target visual family
+- each integer is exactly one second
+
+ACTIVE:
+- countdown timer starts
+- scoring enabled
+- grid target sequence advances
+- HUD values update
+
+PAUSED:
+- freeze timer and scoring
+- use `05_Play_Button_Matched.png` for RESUME
+- provide END GAME as a secondary native action
+
+COMPLETE:
+- use current game completion/result navigation
+
+============================================================
+BOTTOM ~30% HUD
+============================================================
+
+Match `03_Game_HUD_Reference.png`.
+
+Dark navy rounded panel with cyan edge treatment.
+
+PRIMARY ROW — THREE EQUAL COLUMNS:
+
+TIME LEFT
+- icon: `07_Timer_Icon_Exact.png`
+- large value: `00:42`
+- cyan
+
+SCORE
+- icon: `08_Score_Trophy_Icon_Exact.png`
+- large value from existing scoring state
+- gold
+
+STREAK
+- icon: `09_Streak_Flame_Icon_Exact.png`
+- currentStreak
+- orange once active/significant
+
+SECONDARY ROW:
+
+LAST HIT
+- icon: `10_LastHit_Target_Icon_Exact.png`
+- show actual last-hit points/event value if the domain exposes one
+- DO NOT hardcode +10 purely because the mock-up shows it
+
+STARS
+- icon: `11_Star_Icon_Exact.png`
+- earnedStars = hitCount / 5 according to existing game spec
+- support filled/empty native visuals around/alongside the icon if required
+
+COMBO
+- icon: `12_Combo_Lightning_Icon_Exact.png`
+- 1x / 2x / 3x
+- thresholds come from existing logic
+
+Bottom:
+- native progress strip styled to match `13_Progress_Strip_Reference.png`
+- drive it from the selected pattern sequence
+- completed = green check
+- current = cyan glow
+- future = muted outline
+
+============================================================
+SCORING / STATE WIRING
+============================================================
+
+Read `docs/SCORING_AND_STATE.md` before implementing.
+
+Preserve existing:
+- pattern sequence looping
+- hit deduplication
+- miss logic
+- hitCount/missCount
+- currentStreak/bestStreak
+- combo thresholds
+- star award rule
+- any current power-up state
+- result score calculation
+
+The UI OBSERVES these values.
+Do not create a parallel scoring engine in the composable.
+
+If no live numeric score is currently exposed, do not fabricate one in UI.
+Expose/refactor the existing engine state cleanly or show the supported hit/points state until a real score value exists.
+
+============================================================
+30 / 60 SECOND ROUND TIMER
+============================================================
+
+Before start:
+[ 30 SEC ] [ 60 SEC ]
+
+After START:
+10 -> 1 -> GO!
+
+Then count DOWN from selected duration.
+
+Under 10s:
+- gold/orange emphasis
+
+Last 5s:
+- restrained pulse
+
+At zero:
+- stop accepting scoring events
+- invoke existing completion/result flow
+
+============================================================
+HIT / MISS FEEDBACK
+============================================================
+
+HIT:
+- fast green/gold ring/burst around target
+- optional floating points value only if existing scoring event provides it
+- 350–500ms
+- advance to next target
+
+MISS:
+- brief restrained red/orange ring
+- do not wash whole camera red
+- existing miss rule resets streak
+
+============================================================
+FONTS / TYPOGRAPHY
+============================================================
+
+Reuse the existing BallStars typography resources. Do not add a new font dependency.
+
+If the current BallStars theme already exposes the established Alatsi / Almarai family:
+- ALATSI: pattern headings, HUD main headings, large score/timer/streak numerals, countdown
+- ALMARAI: labels such as TIME LEFT / SCORE / STREAK / LAST HIT / STARS / COMBO and supporting copy
+
+If the project theme uses different named wrappers, use those wrappers instead of directly instantiating fonts.
+
+Suggested visual sizes (responsive):
+- pattern title: ~18–22sp bold/display
+- primary HUD numerals: ~34–44sp
+- secondary values: ~24–32sp
+- labels: ~11–14sp, uppercase/tracked
+- countdown number: ~64–90sp
+
+For timer/score digits, use tabular numerals or the existing numeric style if supported so values do not jump horizontally.
+
+============================================================
+RESOURCE INSTALLATION
+============================================================
+
+Copy direct-runtime PNGs from this pack into the project's Compose resources, normally:
+`composeApp/src/commonMain/composeResources/drawable/`
+or the actual resource source-set used by this project.
+
+Load with `painterResource(Res.drawable....)`.
+
+Do not reference `/mnt/data` or the ZIP at runtime.
+
+============================================================
+DO NOT CHANGE
+============================================================
+
+Do not replace:
+- CameraX
+- current 4:3 analysis stream
+- TFLite detector
+- coordinate transformation
+- calibrated-grid repository/model
+- hit detection
+- pattern definitions
+- score/result model
+- navigation architecture
+
+Refactor the current Game Screen UI rather than creating a second competing game implementation.
+
+============================================================
+ACCEPTANCE
+============================================================
+
+- Same background resource as Target Detection.
+- Upper ~70% is real camera with rounded cyan aperture.
+- Lower ~30% is live HUD.
+- Grid is dynamically drawn in Compose from calibrated positions.
+- Active target matches reference glow.
+- Exact supplied pause/play visual family is used.
+- Exact supplied HUD icons are used.
+- 30/60 selection works.
+- 10→1→GO countdown works and does not score.
+- Timer counts down.
+- Score/hits/streak/stars/combo are wired to existing domain state.
+- Combo/stars follow existing rules.
+- No invented per-hit +10 unless actual scoring exposes it.
+- Existing CameraX/detection/hit logic remains working.
+- Pixel 9 and smaller portrait layouts remain usable.

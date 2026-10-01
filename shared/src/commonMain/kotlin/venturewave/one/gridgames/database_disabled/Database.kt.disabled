@@ -1,0 +1,43 @@
+package venturewave.one.gridgames.database
+
+import app.cash.sqldelight.db.SqlDriver
+
+/**
+ * Singleton database instance provider.
+ * Manages the database lifecycle and provides access to queries.
+ */
+object Database {
+    private var driver: SqlDriver? = null
+    private var database: BallStarsDatabase? = null
+
+    /**
+     * Initialize the database with a platform-specific driver.
+     * Must be called before accessing the database.
+     */
+    fun initialize(driverFactory: DatabaseDriverFactory) {
+        if (database == null) {
+            driver = driverFactory.createDriver()
+            database = BallStarsDatabase(driver!!)
+        }
+    }
+
+    /**
+     * Get the database instance.
+     * Throws if not initialized.
+     */
+    fun getInstance(): BallStarsDatabase {
+        return database ?: throw IllegalStateException(
+            "Database not initialized. Call Database.initialize() first."
+        )
+    }
+
+    /**
+     * Close the database connection.
+     * Should be called when the app is shutting down.
+     */
+    fun close() {
+        driver?.close()
+        driver = null
+        database = null
+    }
+}
