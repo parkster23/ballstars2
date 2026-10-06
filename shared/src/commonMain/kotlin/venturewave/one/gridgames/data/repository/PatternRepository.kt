@@ -19,19 +19,29 @@ class PatternRepository(private val fileStorage: FileStorage) {
     }
 
     /**
-     * Load all patterns from storage, seeding with bundled patterns if file doesn't exist
+     * Load all patterns from storage.
+     *
+     * Bundled (non-custom) patterns are always re-synced to
+     * TrainingPattern.getBundledPatterns() - the code is the source of
+     * truth for them, not whatever was previously persisted to disk.
+     * Without this, editing getBundledPatterns() (renaming patterns,
+     * changing sequences, etc.) would silently have no effect for any
+     * device/emulator that had already run the app once and persisted
+     * the old list to patterns.json.
+     *
+     * User-created custom patterns (isCustom = true) are preserved as-is.
      */
     suspend fun getAllPatterns(): List<TrainingPattern> {
         return try {
             val storage = loadStorage()
-            if (storage.patterns.isEmpty()) {
-                // First time - seed with bundled patterns
-                val bundled = TrainingPattern.getBundledPatterns()
-                savePatterns(bundled)
-                bundled
-            } else {
-                storage.patterns
+            val customPatterns = storage.patterns.filter { it.isCustom }
+            val merged = TrainingPattern.getBundledPatterns() + customPatterns
+
+            if (storage.patterns != merged) {
+                savePatterns(merged)
             }
+
+            merged
         } catch (e: Exception) {
             println("PatternRepository.getAllPatterns error: ${e.message}")
             e.printStackTrace()

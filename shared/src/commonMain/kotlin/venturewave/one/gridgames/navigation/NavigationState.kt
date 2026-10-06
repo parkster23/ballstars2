@@ -17,7 +17,6 @@ import venturewave.one.gridgames.model.TrainingPattern
 sealed class Screen {
     data object Splash : Screen()              // Initial splash screen with logo
     data object MainMenu : Screen()            // Main menu (Training/Game Mode/Setup Zone)
-    data object PlayChoice : Screen()          // Play choice screen (Setup/Training/Matches)
     data object Intro1 : Screen()              // First intro screen with hero image
     data object SetupExplainer : Screen()      // Setup & Start explainer screen (Step 1)
     data object GridCreatorExplainer : Screen() // Grid Creator explainer screen (Step 2)
@@ -31,7 +30,7 @@ sealed class Screen {
     data class Game(val pattern: TrainingPattern) : Screen()  // Active game session
     data object BestScores : Screen()          // Leaderboard per pattern
     data class Score(val result: GameResult) : Screen()       // Post-game score screen
-    data object GameModeSelection : Screen()   // Game mode selection screen
+    data object Freestyle : Screen()           // Freestyle Gameplay Mode (no single pre-selected pattern)
     data object Stats : Screen()               // Stats screen
     data object Settings : Screen()            // Settings screen
     data object Profile : Screen()             // Player profile screen

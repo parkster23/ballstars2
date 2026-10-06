@@ -138,6 +138,25 @@ fun ScoreScreen(
                     value = result.patternsCompleted.toString(),
                     modifier = Modifier.fillMaxWidth(0.8f)
                 )
+
+                // Bonus points earned from the 3x completion multiplier on
+                // clean laps, and points lost to wrong-target hits.
+                Row(
+                    modifier = Modifier.fillMaxWidth(0.8f),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    ScoreCard(
+                        label = "Bonus (3x)",
+                        value = "+${result.bonusPoints}",
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    ScoreCard(
+                        label = "Points Lost",
+                        value = "-${result.penaltyPoints}",
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
 
             // Bottom section: Buttons

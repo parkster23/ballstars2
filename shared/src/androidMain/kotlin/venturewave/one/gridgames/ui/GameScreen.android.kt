@@ -57,10 +57,14 @@ import venturewave.one.gridgames.detection.BallDetectorHelper
 import venturewave.one.gridgames.detection.BallDetectorViewModel
 import venturewave.one.gridgames.model.GameResult
 import venturewave.one.gridgames.model.TrainingPattern
+import venturewave.one.gridgames.model.POINTS_PER_HIT
+import venturewave.one.gridgames.model.WRONG_TARGET_PENALTY
+import venturewave.one.gridgames.model.patternCompletionBonus
+import venturewave.one.gridgames.platform.playCountdownBeep
+import venturewave.one.gridgames.platform.playGoSound
 import venturewave.one.gridgames.ui.theme.BallStarsColor
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.roundToInt
 import java.text.NumberFormat
 
 /**
@@ -156,6 +160,15 @@ actual fun GameScreen(
     var gameActive by remember { mutableStateOf(false) }
     var lastHitTargetNumber by remember { mutableStateOf<Int?>(null) }  // Track last hit target for highlighting
 
+    // Training scoring state (see TrainingScoring.kt): points per hit, a 3x
+    // completion bonus for a clean pattern lap, a penalty for wrong hits.
+    var sessionScore by remember { mutableStateOf(0) }       // running total; score climbs live during play
+    var cleanLap by remember { mutableStateOf(true) }         // resets true at the start of each lap; false disqualifies this lap's completion bonus
+    var hitsThisLap by remember { mutableStateOf(0) }         // feeds the completion bonus calculation
+    var bonusPoints by remember { mutableStateOf(0) }         // running total of completion bonuses earned this session
+    var penaltyPoints by remember { mutableStateOf(0) }       // running total lost to wrong-target hits this session
+    var missedTargetsInIteration by remember { mutableStateOf(setOf<Int>()) }  // 0-based indices already penalized this lap - caps each wrong box at one miss per lap, immune to detection flicker
+
     // Power-up and game mechanics state
     var currentStreak by remember { mutableStateOf(0) }
     var bestStreak by remember { mutableStateOf(0) }
@@ -216,66 +229,53 @@ actual fun GameScreen(
         // Loop the pattern - use modulo to repeat
         val actualTargetIndex = currentTargetIndex % pattern.targetSequence.size
         val currentTargetNumber = pattern.targetSequence[actualTargetIndex]
-        val currentTargetBox = calibratedGrid[currentTargetNumber - 1] // Convert 1-based to 0-based index
 
-        android.util.Log.d("GameScreen", "Current target: $currentTargetNumber (index $actualTargetIndex), box=[${currentTargetBox.x}, ${currentTargetBox.y}, ${currentTargetBox.width}, ${currentTargetBox.height}]")
+        // Use actual tensor image dimensions (after rotation is applied)
+        val tensorWidth = viewModel.tensorImageWidth.toFloat()
+        val tensorHeight = viewModel.tensorImageHeight.toFloat()
 
-        // Check if ball detection intersects with current target box
-        val hit = detectionResults.any { detection ->
-            val score = detection.categories.firstOrNull()?.score ?: 0f
-            if (score < 0.20f) {
-                android.util.Log.d("GameScreen", "Detection score too low: $score")
-                return@any false
+        // Scale factors between calibration-viewport space, the current game
+        // aperture, and the detector's tensor space. None of these depend on
+        // which target box is being tested, so they're computed once per
+        // frame and reused below for every detection against every box.
+        val sourceWidth = calibratedGrid.sourceViewportWidth
+        val sourceHeight = calibratedGrid.sourceViewportHeight
+        val calibrationToGameScaleX = if (sourceWidth > 0f) screenSize.width.toFloat() / sourceWidth else 1f
+        val calibrationToGameScaleY = if (sourceHeight > 0f) screenSize.height.toFloat() / sourceHeight else 1f
+        val gameToTensorScaleX = if (screenSize.width > 0) tensorWidth / screenSize.width.toFloat() else 1f
+        val gameToTensorScaleY = if (screenSize.height > 0) tensorHeight / screenSize.height.toFloat() else 1f
+
+        // For each valid detection, map its tensor-space center back into
+        // calibration-viewport space (the inverse of the forward transform
+        // above) so CalibratedGrid's own findTargetAt can tell us which of
+        // the 9 boxes (if any) it's in - current target or a wrong one.
+        val matchedTargets = if (tensorWidth == 0f || tensorHeight == 0f) {
+            android.util.Log.w("GameScreen", "Tensor dimensions not available yet")
+            emptyList()
+        } else {
+            detectionResults.mapNotNull { detection ->
+                val score = detection.categories.firstOrNull()?.score ?: 0f
+                if (score < 0.20f) return@mapNotNull null
+
+                val ballBox = detection.boundingBox
+                val ballCameraX = ballBox.centerX()
+                val ballCameraY = ballBox.centerY()
+
+                val ballGameX = ballCameraX / gameToTensorScaleX
+                val ballGameY = ballCameraY / gameToTensorScaleY
+                val ballCalibrationX = ballGameX / calibrationToGameScaleX
+                val ballCalibrationY = ballGameY / calibrationToGameScaleY
+
+                calibratedGrid.findTargetAt(ballCalibrationX, ballCalibrationY)
             }
-
-            val ballBox = detection.boundingBox
-
-            // Use actual tensor image dimensions (after rotation is applied)
-            val tensorWidth = viewModel.tensorImageWidth.toFloat()
-            val tensorHeight = viewModel.tensorImageHeight.toFloat()
-
-            if (tensorWidth == 0f || tensorHeight == 0f) {
-                android.util.Log.w("GameScreen", "Tensor dimensions not available yet")
-                return@any false
-            }
-
-            // FIRST: Transform from calibration space to current game aperture space
-            val sourceWidth = calibratedGrid.sourceViewportWidth
-            val sourceHeight = calibratedGrid.sourceViewportHeight
-
-            val calibrationToGameScaleX = if (sourceWidth > 0f) {
-                screenSize.width.toFloat() / sourceWidth
-            } else 1f
-
-            val calibrationToGameScaleY = if (sourceHeight > 0f) {
-                screenSize.height.toFloat() / sourceHeight
-            } else 1f
-
-            val gameTargetX = currentTargetBox.x * calibrationToGameScaleX
-            val gameTargetY = currentTargetBox.y * calibrationToGameScaleY
-            val gameTargetWidth = currentTargetBox.width * calibrationToGameScaleX
-            val gameTargetHeight = currentTargetBox.height * calibrationToGameScaleY
-
-            // SECOND: Transform from game aperture space to tensor space
-            val gameToTensorScaleX = tensorWidth / screenSize.width.toFloat()
-            val gameToTensorScaleY = tensorHeight / screenSize.height.toFloat()
-
-            val targetCameraLeft = gameTargetX * gameToTensorScaleX
-            val targetCameraTop = gameTargetY * gameToTensorScaleY
-            val targetCameraRight = (gameTargetX + gameTargetWidth) * gameToTensorScaleX
-            val targetCameraBottom = (gameTargetY + gameTargetHeight) * gameToTensorScaleY
-
-            // Ball coordinates are already in tensor/camera space - use directly
-            val ballCameraX = ballBox.centerX()
-            val ballCameraY = ballBox.centerY()
-
-            val isInside = ballCameraX >= targetCameraLeft && ballCameraX <= targetCameraRight &&
-                ballCameraY >= targetCameraTop && ballCameraY <= targetCameraBottom
-
-            android.util.Log.d("GameScreen", "Ball camera=[$ballCameraX, $ballCameraY] targetCamera=[L:$targetCameraLeft T:$targetCameraTop R:$targetCameraRight B:$targetCameraBottom] tensorSize=${tensorWidth}x${tensorHeight} screenSize=${screenSize.width}x${screenSize.height} inside=$isInside")
-
-            isInside
         }
+
+        val hit = matchedTargets.any { it.index == currentTargetNumber - 1 }
+        val wrongTargetNumber: Int? = if (!hit) {
+            matchedTargets.firstOrNull { it.index != currentTargetNumber - 1 }?.let { it.index + 1 }
+        } else null
+
+        android.util.Log.d("GameScreen", "Current target: $currentTargetNumber (index $actualTargetIndex), hit=$hit wrongTarget=$wrongTargetNumber")
 
         if (hit) {
             // Check if this sequence position was already hit in current iteration
@@ -289,6 +289,8 @@ actual fun GameScreen(
                 hitPositionsInIteration = hitPositionsInIteration + actualTargetIndex
 
                 hitCount++
+                sessionScore += POINTS_PER_HIT
+                hitsThisLap++
                 lastHitTargetNumber = currentTargetNumber
                 currentTargetIndex++
                 hitAnimationTrigger = currentTargetNumber // Trigger hit animation
@@ -319,17 +321,51 @@ actual fun GameScreen(
                     // Completed iteration - activate power-up!
                     android.util.Log.i("GameScreen", "✅ ITERATION $newIterationCount COMPLETE! Starting iteration ${newIterationCount + 1}")
 
-                    // Reset hit positions for new iteration
+                    // Reset hit positions and the per-lap miss cap for new iteration
                     hitPositionsInIteration = setOf()
+                    missedTargetsInIteration = setOf()
 
                     powerUpActive = true
                     powerUpTimeRemaining = 5f // 5 seconds of power-up
+
+                    // Completion bonus: only paid if no wrong-target hit
+                    // occurred anywhere during the lap that just finished -
+                    // tops the per-hit points already paid out up to a full
+                    // 3x multiplier for this lap.
+                    if (cleanLap) {
+                        val bonus = patternCompletionBonus(hitsThisLap)
+                        sessionScore += bonus
+                        bonusPoints += bonus
+                        android.util.Log.i("GameScreen", "✨ PATTERN COMPLETE CLEAN! +$bonus bonus (3x)")
+                    } else {
+                        android.util.Log.i("GameScreen", "Pattern complete, but not clean - no bonus")
+                    }
+
+                    cleanLap = true
+                    hitsThisLap = 0
                 }
             } else if (alreadyHitThisPosition) {
                 android.util.Log.d("GameScreen", "⚠️ Position $actualTargetIndex already hit in this iteration - ignoring")
             }
+        } else if (wrongTargetNumber != null) {
+            val wrongTargetIndex = wrongTargetNumber - 1
+            if (!missedTargetsInIteration.contains(wrongTargetIndex)) {
+                android.util.Log.i("GameScreen", "❌ BALL IN WRONG TARGET $wrongTargetNumber (expected $currentTargetNumber) - penalty + bonus suppressed")
+                missedTargetsInIteration = missedTargetsInIteration + wrongTargetIndex
+                missCount++
+                cleanLap = false
+                sessionScore -= WRONG_TARGET_PENALTY
+                penaltyPoints += WRONG_TARGET_PENALTY
+            }
+            // Ball is sitting in a (wrong) box, so it's definitely off the
+            // current target too - mirror the existing "left target" reset.
+            if (lastHitTargetNumber != null) {
+                lastHitTargetNumber = null
+                currentStreak = 0
+                combo = 1
+            }
         } else {
-            // Ball not in any target box - clear last hit
+            // Ball not in any target box - clear last hit state
             if (lastHitTargetNumber != null) {
                 android.util.Log.d("GameScreen", "Ball left target $lastHitTargetNumber")
                 lastHitTargetNumber = null
@@ -371,9 +407,11 @@ actual fun GameScreen(
     LaunchedEffect(gamePhase) {
         if (gamePhase == GamePhase.COUNTDOWN) {
             countdownValue = 10
+            playCountdownBeep()
             while (countdownValue > 0) {
                 delay(1000)
                 countdownValue--
+                if (countdownValue > 0) playCountdownBeep() else playGoSound()
             }
             // Show "GO!" for 1 second
             delay(1000)
@@ -395,11 +433,15 @@ actual fun GameScreen(
                 gamePhase = GamePhase.COMPLETE
                 gameActive = false
 
-                // Calculate final results
+                // Calculate final results. Score is the running sessionScore
+                // accumulated lap-by-lap and hit-by-hit during play (see the
+                // hit-detection LaunchedEffect above), not a formula computed
+                // once here. accuracy is now meaningful since missCount is
+                // actually incremented on wrong-target hits.
                 val totalTime = System.currentTimeMillis() - startTime
                 val totalTargets = hitCount + missCount
                 val accuracy = if (totalTargets > 0) hitCount.toFloat() / totalTargets.toFloat() * 100f else 0f
-                val score = calculateScore(totalTime, accuracy)
+                val score = sessionScore
 
                 // Full loops through pattern.targetSequence completed this
                 // session (e.g. Triangles [5,7,4,5] hit once = 1). Same
@@ -415,7 +457,9 @@ actual fun GameScreen(
                         hitCount = hitCount,
                         missCount = missCount,
                         accuracy = accuracy,
-                        patternsCompleted = patternsCompleted
+                        patternsCompleted = patternsCompleted,
+                        bonusPoints = bonusPoints,
+                        penaltyPoints = penaltyPoints
                     )
                 )
             }
@@ -506,14 +550,20 @@ actual fun GameScreen(
                         // Clipping is handled at the Android View level via clipToOutline
                     )
 
-                    if (calibratedGrid != null) {
+                    // Only shown pre-game (TIME_SELECTION/COUNTDOWN): the
+                    // player can't see the screen once play starts, and the
+                    // composable's perpetual pulse animation (rememberInfiniteTransition)
+                    // keeps redrawing at ~60fps for as long as it's on screen,
+                    // which visibly lags the camera preview for anyone
+                    // watching the phone during actual play.
+                    if (calibratedGrid != null &&
+                        (gamePhase == GamePhase.TIME_SELECTION || gamePhase == GamePhase.COUNTDOWN)
+                    ) {
                         val actualTargetIndex = currentTargetIndex % pattern.targetSequence.size
                         val activeTarget = when (gamePhase) {
                             GamePhase.TIME_SELECTION -> pattern.targetSequence[previewIndex]
-                            GamePhase.COUNTDOWN,
-                            GamePhase.ACTIVE,
-                            GamePhase.PAUSED -> pattern.targetSequence[actualTargetIndex]
-                            GamePhase.COMPLETE -> null
+                            GamePhase.COUNTDOWN -> pattern.targetSequence[actualTargetIndex]
+                            else -> null
                         }
 
                         CalibratedGridOverlay(
@@ -583,13 +633,6 @@ actual fun GameScreen(
                 GamePhase.ACTIVE,
                 GamePhase.PAUSED,
                 GamePhase.COMPLETE -> {
-                    val accuracy = if (hitCount + missCount > 0) {
-                        hitCount.toFloat() / (hitCount + missCount).toFloat() * 100f
-                    } else 0f
-                    val elapsedForHud = if (gameActive) {
-                        (selectedTimeDuration - timeRemaining).coerceAtLeast(0) * 1000L
-                    } else 0L
-                    val liveScore = calculateScore(elapsedForHud, accuracy)
                     val displaySeconds = if (gamePhase == GamePhase.COUNTDOWN) {
                         selectedTimeDuration
                     } else {
@@ -598,7 +641,7 @@ actual fun GameScreen(
 
                     GameplayHud(
                         timeRemaining = displaySeconds,
-                        score = liveScore,
+                        score = sessionScore,
                         streak = currentStreak,
                         lastHitTarget = lastHitTargetNumber,
                         stars = stars,
@@ -634,25 +677,6 @@ private fun BallStarsGameplayBackground() {
                 )
         )
 
-        // This artwork is a single complete scene (both characters, the ball,
-        // the BALL STARS logo) at a native ~461x342 (461f/342f) aspect ratio —
-        // NOT header-banner art. A fixed height() here would crop a different
-        // amount of the image on every device, since fillMaxWidth() makes the
-        // box's aspect ratio vary by screen width while the source image's
-        // aspect ratio stays fixed. Locking the box to the image's own aspect
-        // ratio instead guarantees the full scene is visible on any screen
-        // size, with zero cropping, rather than "less cropping."
-        Image(
-            painter = painterResource(Res.drawable.target_header_background),
-            contentDescription = null,
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(461f / 342f)
-                .align(Alignment.TopCenter),
-            contentScale = ContentScale.Crop,
-            alignment = Alignment.Center
-        )
-
         Image(
             painter = painterResource(Res.drawable.target_left_edge),
             contentDescription = null,
@@ -671,6 +695,27 @@ private fun BallStarsGameplayBackground() {
                 .width(58.dp)
                 .align(Alignment.CenterEnd),
             contentScale = ContentScale.FillHeight
+        )
+
+        // This artwork is a single complete scene (both characters, the ball,
+        // the BALL STARS logo) at a native ~461x342 (461f/342f) aspect ratio —
+        // NOT header-banner art. A fixed height() here would crop a different
+        // amount of the image on every device, since fillMaxWidth() makes the
+        // box's aspect ratio vary by screen width while the source image's
+        // aspect ratio stays fixed. Locking the box to the image's own aspect
+        // ratio instead guarantees the full scene is visible on any screen
+        // size, with zero cropping, rather than "less cropping." Drawn last
+        // (on top) so it spans the full width across both side edge images,
+        // rather than having them cut across its corners.
+        Image(
+            painter = painterResource(Res.drawable.target_header_background),
+            contentDescription = null,
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(461f / 342f)
+                .align(Alignment.TopCenter),
+            contentScale = ContentScale.Crop,
+            alignment = Alignment.Center
         )
     }
 }
@@ -1637,16 +1682,4 @@ private fun BallDetectionDebugOverlay(
             }
         }
     }
-}
-
-/**
- * Calculate score based on time and accuracy
- * Faster time + higher accuracy = higher score
- */
-private fun calculateScore(totalTimeMs: Long, accuracy: Float): Int {
-    val baseScore = 1000
-    val timeBonus = maxOf(0, (30000 - totalTimeMs) / 100).toInt() // Bonus for finishing under 30s
-    val accuracyBonus = (accuracy * 10).roundToInt()
-
-    return baseScore + timeBonus + accuracyBonus
 }

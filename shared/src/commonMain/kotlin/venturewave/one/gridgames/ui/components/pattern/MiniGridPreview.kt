@@ -68,10 +68,16 @@ fun MiniGridPreview(
             )
         }
 
-        // Helper function to get cell center position from grid number (1-9)
+        // Helper function to get cell center position from grid number (1-9).
+        // targetSequence numbers are defined from the camera's point of view (that's
+        // what drives hit-detection), but the camera and player face each other across
+        // the grid, so both axes invert from the player's point of view - not just
+        // left/right. Rotating 180 degrees (row and column both mirrored) is equivalent
+        // to mapping gridNum -> 10 - gridNum.
         fun getCellCenter(gridNum: Int): Offset {
-            val row = (gridNum - 1) / 3
-            val col = (gridNum - 1) % 3
+            val mirroredGridNum = 10 - gridNum
+            val row = (mirroredGridNum - 1) / 3
+            val col = (mirroredGridNum - 1) % 3
             return Offset(
                 x = col * cellWidth + cellWidth / 2f,
                 y = row * cellHeight + cellHeight / 2f

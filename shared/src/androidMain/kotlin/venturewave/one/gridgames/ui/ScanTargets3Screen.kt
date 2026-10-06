@@ -372,7 +372,6 @@ fun ScanTargets2Screen(
             CalibrationControls(
                 touchCount = touchPositions.size,
                 isConfirmed = isConfirmed,
-                showLockInButton = showLockInButton,
 
                 onReset = {
 
@@ -387,8 +386,17 @@ fun ScanTargets2Screen(
                     showLockInButton = false
                 },
 
-                onConfirm = {
-                    // This is now handled by the Lock In button
+                onUndo = {
+                    if (touchPositions.isNotEmpty()) {
+                        touchPositions.removeAt(touchPositions.lastIndex)
+                    }
+
+                    // Undoing the 9th point (or any point mid-wipe-animation)
+                    // must cancel the "all 9 placed" wipe/lock-in sequence so
+                    // the screen correctly goes back to plain tapping mode.
+                    showWipeAnimation = false
+                    wipeProgress = 0f
+                    showLockInButton = false
                 }
             )
 
@@ -1247,9 +1255,8 @@ private fun InstructionOverlay(
 private fun CalibrationControls(
     touchCount: Int,
     isConfirmed: Boolean,
-    showLockInButton: Boolean,
     onReset: () -> Unit,
-    onConfirm: () -> Unit
+    onUndo: () -> Unit
 ) {
 
     Row(
@@ -1287,15 +1294,17 @@ private fun CalibrationControls(
         }
 
 
-        // Don't show confirm button if lock-in button is visible
+        // Undo the last placed point while still tapping - replaces what
+        // used to be a "Confirm" button here that was already a no-op
+        // (the real confirmation is the Lock In button inside the camera
+        // aperture overlay once all 9 points are placed).
         if (
-            touchCount == 9 &&
-            !isConfirmed &&
-            !showLockInButton
+            touchCount > 0 &&
+            !isConfirmed
         ) {
 
             Button(
-                onClick = onConfirm,
+                onClick = onUndo,
 
                 modifier = Modifier
                     .weight(1f)
@@ -1315,7 +1324,7 @@ private fun CalibrationControls(
             ) {
 
                 Text(
-                    text = "Confirm",
+                    text = "Undo",
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis

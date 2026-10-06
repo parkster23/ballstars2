@@ -20,6 +20,11 @@ import venturewave.one.gridgames.detection.BallDetector
 import venturewave.one.gridgames.model.CalibratedGrid
 import venturewave.one.gridgames.model.GameResult
 import venturewave.one.gridgames.model.TrainingPattern
+import venturewave.one.gridgames.model.POINTS_PER_HIT
+import venturewave.one.gridgames.model.WRONG_TARGET_PENALTY
+import venturewave.one.gridgames.model.patternCompletionBonus
+import venturewave.one.gridgames.platform.playCountdownBeep
+import venturewave.one.gridgames.platform.playGoSound
 import venturewave.one.gridgames.viewmodels.currentTimeMillis
 
 /**
@@ -78,6 +83,15 @@ actual fun GameScreen(
     var gameActive by remember { mutableStateOf(false) }
     var startTime by remember { mutableStateOf(0L) }
 
+    // Training scoring state - mirrors GameScreen.android.kt, backed by the
+    // same shared TrainingScoring.kt functions.
+    var sessionScore by remember { mutableStateOf(0) }
+    var cleanLap by remember { mutableStateOf(true) }
+    var hitsThisLap by remember { mutableStateOf(0) }
+    var bonusPoints by remember { mutableStateOf(0) }
+    var penaltyPoints by remember { mutableStateOf(0) }
+    var missedTargetsInIteration by remember { mutableStateOf(setOf<Int>()) }  // 0-based indices already penalized this lap
+
     var screenSize by remember { mutableStateOf(IntSize(1080, 2424)) }
     var latestDetections by remember { mutableStateOf<List<TFLDetection>>(emptyList()) }
 
@@ -115,48 +129,55 @@ actual fun GameScreen(
 
         val actualTargetIndex = currentTargetIndex % pattern.targetSequence.size
         val currentTargetNumber = pattern.targetSequence[actualTargetIndex]
-        val currentTargetBox = calibratedGrid[currentTargetNumber - 1]
 
         val sourceWidth = calibratedGrid.sourceViewportWidth
         val sourceHeight = calibratedGrid.sourceViewportHeight
         val calToGameScaleX = if (sourceWidth > 0f) screenSize.width / sourceWidth else 1f
         val calToGameScaleY = if (sourceHeight > 0f) screenSize.height / sourceHeight else 1f
-
-        val gameTargetX = currentTargetBox.x * calToGameScaleX
-        val gameTargetY = currentTargetBox.y * calToGameScaleY
-        val gameTargetW = currentTargetBox.width * calToGameScaleX
-        val gameTargetH = currentTargetBox.height * calToGameScaleY
-
         val gameToCaptureScaleX = captureWidth / screenSize.width.toFloat()
         val gameToCaptureScaleY = captureHeight / screenSize.height.toFloat()
 
-        val targetLeft = gameTargetX * gameToCaptureScaleX
-        val targetTop = gameTargetY * gameToCaptureScaleY
-        val targetRight = (gameTargetX + gameTargetW) * gameToCaptureScaleX
-        val targetBottom = (gameTargetY + gameTargetH) * gameToCaptureScaleY
-
-        val hit = latestDetections.any { detection ->
+        // Map each valid detection's capture-space center back into
+        // calibration-viewport space (inverse of the forward transform) so
+        // CalibratedGrid's own findTargetAt can tell us which of the 9
+        // boxes (if any) it's in - current target or a wrong one. Mirrors
+        // GameScreen.android.kt's equivalent refactor.
+        val matchedTargets = latestDetections.mapNotNull { detection ->
             // NSArray<TFLCategory *> comes through cinterop as an erased
             // List<*>, same as TFLDetectionResult.detections in
             // BallDetector.ios.kt.
             @Suppress("UNCHECKED_CAST")
             val categories = detection.categories as List<platform.TensorFlowLiteTaskVision.TFLCategory>
             val score = categories.firstOrNull()?.score ?: 0f
-            if (score < 0.20f) return@any false
+            if (score < 0.20f) return@mapNotNull null
+
             // CGRectGetMidX/Y avoid useContents{}'s origin/size property
             // names clashing with this file's Compose Modifier.size/width
             // extension-function imports.
             val box = detection.boundingBox
-            val cx = platform.CoreGraphics.CGRectGetMidX(box).toFloat()
-            val cy = platform.CoreGraphics.CGRectGetMidY(box).toFloat()
-            cx in targetLeft..targetRight && cy in targetTop..targetBottom
+            val captureX = platform.CoreGraphics.CGRectGetMidX(box).toFloat()
+            val captureY = platform.CoreGraphics.CGRectGetMidY(box).toFloat()
+
+            val gameX = captureX / gameToCaptureScaleX
+            val gameY = captureY / gameToCaptureScaleY
+            val calibrationX = gameX / calToGameScaleX
+            val calibrationY = gameY / calToGameScaleY
+
+            calibratedGrid.findTargetAt(calibrationX, calibrationY)
         }
+
+        val hit = matchedTargets.any { it.index == currentTargetNumber - 1 }
+        val wrongTargetNumber: Int? = if (!hit) {
+            matchedTargets.firstOrNull { it.index != currentTargetNumber - 1 }?.let { it.index + 1 }
+        } else null
 
         if (hit) {
             val alreadyHit = hitPositionsInIteration.contains(actualTargetIndex)
             if (lastHitTargetNumber != currentTargetNumber && !alreadyHit) {
                 hitPositionsInIteration = hitPositionsInIteration + actualTargetIndex
                 hitCount++
+                sessionScore += POINTS_PER_HIT
+                hitsThisLap++
                 lastHitTargetNumber = currentTargetNumber
                 currentTargetIndex++
 
@@ -164,19 +185,46 @@ actual fun GameScreen(
                 val prevIteration = (currentTargetIndex - 1) / pattern.targetSequence.size
                 if (newIteration > prevIteration) {
                     hitPositionsInIteration = setOf()
+                    missedTargetsInIteration = setOf()
+
+                    // Completion bonus: only paid if no wrong-target hit
+                    // occurred anywhere during the lap that just finished.
+                    if (cleanLap) {
+                        val bonus = patternCompletionBonus(hitsThisLap)
+                        sessionScore += bonus
+                        bonusPoints += bonus
+                    }
+                    cleanLap = true
+                    hitsThisLap = 0
                 }
             }
-        } else if (lastHitTargetNumber != null) {
-            lastHitTargetNumber = null
+        } else if (wrongTargetNumber != null) {
+            val wrongTargetIndex = wrongTargetNumber - 1
+            if (!missedTargetsInIteration.contains(wrongTargetIndex)) {
+                missedTargetsInIteration = missedTargetsInIteration + wrongTargetIndex
+                missCount++
+                cleanLap = false
+                sessionScore -= WRONG_TARGET_PENALTY
+                penaltyPoints += WRONG_TARGET_PENALTY
+            }
+            if (lastHitTargetNumber != null) {
+                lastHitTargetNumber = null
+            }
+        } else {
+            if (lastHitTargetNumber != null) {
+                lastHitTargetNumber = null
+            }
         }
     }
 
     LaunchedEffect(gamePhase) {
         if (gamePhase == IosGamePhase.COUNTDOWN) {
             countdownValue = 10
+            playCountdownBeep()
             while (countdownValue > 0) {
                 delay(1000)
                 countdownValue--
+                if (countdownValue > 0) playCountdownBeep() else playGoSound()
             }
             delay(1000)
             gamePhase = IosGamePhase.ACTIVE
@@ -197,7 +245,7 @@ actual fun GameScreen(
                 val totalTime = currentTimeMillis() - startTime
                 val totalTargets = hitCount + missCount
                 val accuracy = if (totalTargets > 0) hitCount.toFloat() / totalTargets * 100f else 0f
-                val score = 1000 + (accuracy * 10).toInt()
+                val score = sessionScore
                 val patternsCompleted = currentTargetIndex / pattern.targetSequence.size
 
                 onGameComplete(
@@ -208,7 +256,9 @@ actual fun GameScreen(
                         hitCount = hitCount,
                         missCount = missCount,
                         accuracy = accuracy,
-                        patternsCompleted = patternsCompleted
+                        patternsCompleted = patternsCompleted,
+                        bonusPoints = bonusPoints,
+                        penaltyPoints = penaltyPoints
                     )
                 )
             }
@@ -241,7 +291,12 @@ actual fun GameScreen(
                     }
                 )
 
-                if (calibratedGrid != null) {
+                // Only shown pre-game: the player can't see the screen once
+                // play starts, so highlighting a target during ACTIVE/PAUSED
+                // serves no purpose (mirrors GameScreen.android.kt).
+                if (calibratedGrid != null &&
+                    (gamePhase == IosGamePhase.TIME_SELECTION || gamePhase == IosGamePhase.COUNTDOWN)
+                ) {
                     GridOverlay(
                         calibratedGrid = calibratedGrid,
                         currentTarget = pattern.targetSequence[currentTargetIndex % pattern.targetSequence.size],
@@ -291,6 +346,7 @@ actual fun GameScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text("Time: $timeRemaining")
+                        Text("Score: $sessionScore")
                         Text("Hits: $hitCount")
                         Text(
                             "Step ${(currentTargetIndex % pattern.targetSequence.size) + 1}" +

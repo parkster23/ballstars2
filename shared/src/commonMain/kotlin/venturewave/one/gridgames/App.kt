@@ -13,13 +13,13 @@ import venturewave.one.gridgames.navigation.Screen
 import venturewave.one.gridgames.navigation.rememberNavigationState
 import venturewave.one.gridgames.ui.theme.BallStarsColor
 import venturewave.one.gridgames.ui.GameScreen
+import venturewave.one.gridgames.ui.FreestyleGameScreen
 import venturewave.one.gridgames.ui.HomeMenuScreen
 import venturewave.one.gridgames.ui.PatternSelectionScreen
 import venturewave.one.gridgames.ui.ScoreScreen
 import venturewave.one.gridgames.ui.screens.splash.SplashScreen
 import venturewave.one.gridgames.ui.screens.splash.BallStarsSplashScreen
 import venturewave.one.gridgames.ui.screens.menu.BallStarsMainMenuScreen
-import venturewave.one.gridgames.ui.screens.choice.PlayChoiceScreen
 import venturewave.one.gridgames.ui.screens.intro.Intro1Screen
 import venturewave.one.gridgames.ui.screens.explainer.SetupStartExplainerScreen
 import venturewave.one.gridgames.ui.screens.explainer.GridCreatorExplainerScreen
@@ -33,7 +33,7 @@ import venturewave.one.gridgames.ui.theme.BallStarsTheme
 /**
  * Main app entry point with navigation
  *
- * Flow: Splash → PlayChoice → (Setup → GridCreator → CameraCalibration → ScanTargets2 | Training → PatternSelection → Game → Score | BestScores)
+ * Flow: Splash → Home → (Setup → GridCreator → CameraCalibration → ScanTargets2 | Training → PatternSelection → Game → Score | BestScores)
  * Onboarding screens removed from flow
  */
 @Composable
@@ -49,20 +49,10 @@ fun App() {
 
             Screen.MainMenu -> BallStarsMainMenuScreen(
                 onTraining = { navigationState.navigateTo(Screen.PatternSelection) },
-                onGameMode = { navigationState.navigateTo(Screen.GameModeSelection) },
+                onGameMode = { navigationState.navigateTo(Screen.Freestyle) },
                 onSetupZone = { navigationState.navigateTo(Screen.SetupExplainer) },
                 onStats = { navigationState.navigateTo(Screen.Stats) },
                 onSettings = { navigationState.navigateTo(Screen.Settings) }
-            )
-
-            Screen.PlayChoice -> PlayChoiceScreen(
-                onSetupSteps = { navigationState.navigateTo(Screen.SetupExplainer) },
-                onTraining = { navigationState.navigateTo(Screen.PatternSelection) },
-                onMatches = { navigationState.navigateTo(Screen.Home) },
-                onStarScores = { navigationState.navigateTo(Screen.BestScores) },
-                onBack = { navigationState.navigateBack() },
-                onHome = { navigationState.navigateTo(Screen.Home) },
-                onProfile = { navigationState.navigateTo(Screen.Profile) }
             )
 
             Screen.PatternSelection -> TrainingPatternSelectionScreen(
@@ -96,7 +86,7 @@ fun App() {
             is Screen.Score -> ScoreScreen(
                 result = screen.result,
                 onPlayAgain = { navigationState.navigateTo(Screen.PatternSelection) },
-                onBackToHome = { navigationState.navigateTo(Screen.PlayChoice) }
+                onBackToHome = { navigationState.navigateTo(Screen.Home) }
             )
 
             Screen.SetupExplainer -> SetupStartExplainerScreen(
@@ -134,12 +124,12 @@ fun App() {
 
             Screen.ScanTargets2 -> PlatformSpecificScanTargets3(
                 onBack = { navigationState.navigateBack() },
-                onGridCalibrated = { navigationState.navigateTo(Screen.PatternSelection) }
+                onGridCalibrated = { navigationState.navigateTo(Screen.Home) }
             )
 
             Screen.Home -> BallStarsMainMenuScreen(
                 onTraining = { navigationState.navigateTo(Screen.PatternSelection) },
-                onGameMode = { navigationState.navigateTo(Screen.GameModeSelection) },
+                onGameMode = { navigationState.navigateTo(Screen.Freestyle) },
                 onSetupZone = { navigationState.navigateTo(Screen.ScanTargets2) },
                 onSetupExplainer = { navigationState.navigateTo(Screen.SetupExplainer) },
                 onStats = { navigationState.navigateTo(Screen.Stats) },
@@ -150,13 +140,12 @@ fun App() {
                 onBack = { navigationState.navigateBack() }
             )
 
-            // Placeholder screens - to be implemented
-            Screen.GameModeSelection -> PlaceholderScreen(
-                title = "Game Mode Selection",
-                message = "Coming Soon!",
-                onBack = { navigationState.navigateBack() }
+            Screen.Freestyle -> FreestyleGameScreen(
+                onSessionComplete = { navigationState.navigateTo(Screen.Home) },
+                onBackPressed = { navigationState.navigateBack() }
             )
 
+            // Placeholder screens - to be implemented
             Screen.Stats -> PlaceholderScreen(
                 title = "Stats",
                 message = "Your statistics will appear here",
@@ -180,8 +169,8 @@ fun App() {
             }
 
             Screen.Intro1 -> {
-                // Skip intro, go to play choice
-                navigationState.navigateTo(Screen.PlayChoice)
+                // Skip intro, go home
+                navigationState.navigateTo(Screen.Home)
             }
 
             // Fallback: if somehow any other screen is accessed, show main menu

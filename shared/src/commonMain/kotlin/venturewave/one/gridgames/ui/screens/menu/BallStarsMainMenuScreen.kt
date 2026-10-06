@@ -1,5 +1,6 @@
 package venturewave.one.gridgames.ui.screens.menu
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -7,23 +8,33 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import grid_games_mobile.shared.generated.resources.Res
 import grid_games_mobile.shared.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
+import venturewave.one.gridgames.data.GridRepository
+import venturewave.one.gridgames.data.SetupPromptState
 import venturewave.one.gridgames.ui.theme.BallStarsColor
 
 /**
@@ -92,6 +103,28 @@ fun BallStarsMainMenuScreen(
         val cardGap = (maxHeight * 0.0153f).coerceIn(10.dp, 18.dp)
         val bottomSpacer = (maxHeight * 0.024f).coerceIn(16.dp, 26.dp)
 
+        // Re-checked fresh every time this screen enters composition (e.g.
+        // navigating back here after calibrating) - same reason GameScreen
+        // reads GridRepository directly rather than caching. Drives both the
+        // Setup Zone completion tick and the Training/Game Mode invite-pulse.
+        val gridConfigured = GridRepository.hasGrid()
+
+        // Setup Zone only pulsates reactively, after the player has actually
+        // tried (and been blocked) - not just because the grid happens to be
+        // unconfigured on first launch.
+        val setupZonePulsate = !gridConfigured && SetupPromptState.hasBeenPrompted
+
+        var showGridRequiredDialog by remember { mutableStateOf(false) }
+
+        fun requireGridThen(action: () -> Unit) {
+            if (gridConfigured) {
+                action()
+            } else {
+                SetupPromptState.hasBeenPrompted = true
+                showGridRequiredDialog = true
+            }
+        }
+
         // ONE continuous background - full screen urban/graffiti environment
         Image(
             painter = painterResource(Res.drawable.mainmenu_background),
@@ -158,9 +191,11 @@ fun BallStarsMainMenuScreen(
                 heading = "TRAINING",
                 subtitle = "Practice patterns",
                 accentColor = Color(0xFF1ED36A), // Green
-                onClick = onTraining,
+                onClick = { requireGridThen(onTraining) },
                 modifier = Modifier.fillMaxWidth(),
-                height = cardHeight
+                height = cardHeight,
+                // Invite the player to play once there's a grid to play on.
+                pulsate = gridConfigured
             )
 
             Spacer(modifier = Modifier.height(cardGap))
@@ -170,9 +205,10 @@ fun BallStarsMainMenuScreen(
                 heading = "GAME MODE",
                 subtitle = "Test your skills",
                 accentColor = Color(0xFF27E6F5), // Cyan
-                onClick = onGameMode,
+                onClick = { requireGridThen(onGameMode) },
                 modifier = Modifier.fillMaxWidth(),
-                height = cardHeight
+                height = cardHeight,
+                pulsate = gridConfigured
             )
 
             Spacer(modifier = Modifier.height(cardGap))
@@ -184,7 +220,9 @@ fun BallStarsMainMenuScreen(
                 accentColor = Color(0xFF27E6F5), // Cyan
                 onClick = onSetupZone,
                 modifier = Modifier.fillMaxWidth(),
-                height = cardHeight
+                height = cardHeight,
+                showCompletedBadge = gridConfigured,
+                pulsate = setupZonePulsate
             )
 
             // Gap to Stats/Settings (NOT weight(1f) - keep compact!)
@@ -211,6 +249,82 @@ fun BallStarsMainMenuScreen(
             // Small bottom padding for spacing from screen edge
             Spacer(modifier = Modifier.height(24.dp))
         }
+
+        if (showGridRequiredDialog) {
+            GridRequiredDialog(
+                onGoToSetupZone = {
+                    showGridRequiredDialog = false
+                    onSetupZone()
+                },
+                onDismiss = { showGridRequiredDialog = false }
+            )
+        }
+    }
+}
+
+/**
+ * Shown when the player taps Training or Game Mode before calibrating a
+ * grid. Matches the app's established theme (cyan border, dark navy
+ * background, rounded corners) rather than a default Material dialog.
+ */
+@Composable
+private fun GridRequiredDialog(
+    onGoToSetupZone: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.6f))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onDismiss() },
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.85f)
+                .clickable(
+                    // Swallow taps on the card itself so they don't fall
+                    // through to the scrim and dismiss it.
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { }
+                .border(width = 3.dp, color = Color(0xFF27E6F5), shape = RoundedCornerShape(24.dp))
+                .background(color = Color(0xFF08263A), shape = RoundedCornerShape(24.dp))
+                .padding(horizontal = 24.dp, vertical = 28.dp)
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "Setup Zone Not Configured",
+                    color = Color.White,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 20.sp,
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    text = "Calibrate your grid in the Setup Zone before you can train or play.",
+                    color = Color(0xFFB0C4D8),
+                    fontSize = 15.sp,
+                    textAlign = TextAlign.Center
+                )
+                Button(
+                    onClick = onGoToSetupZone,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF27E6F5),
+                        contentColor = Color(0xFF08263A)
+                    )
+                ) {
+                    Text(text = "Go to Setup Zone", fontWeight = FontWeight.Bold)
+                }
+            }
+        }
     }
 }
 
@@ -233,10 +347,32 @@ private fun PrimaryMenuCard(
     accentColor: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    height: androidx.compose.ui.unit.Dp = 120.dp
+    height: androidx.compose.ui.unit.Dp = 120.dp,
+    showCompletedBadge: Boolean = false,
+    pulsate: Boolean = false
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
+
+    // Gentle "invite the player in" breathing scale once there's something
+    // ready to play. Home screen has no competing camera/detection loop
+    // (unlike the in-game grid overlay this same infinite-transition idiom
+    // was once removed from), so a continuous animation here is cheap.
+    val pulseScale = if (pulsate) {
+        val pulseTransition = rememberInfiniteTransition(label = "cardInvitePulse")
+        val scale by pulseTransition.animateFloat(
+            initialValue = 1f,
+            targetValue = 1.03f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(700, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "cardInvitePulseScale"
+        )
+        scale
+    } else {
+        1f
+    }
 
     // Card internals scale with the card's own `height` (which already
     // scales with maxHeight - see BallStarsMainMenuScreen) instead of using
@@ -260,6 +396,7 @@ private fun PrimaryMenuCard(
 
     Box(
         modifier = modifier
+            .scale(pulseScale)
             .semantics { contentDescription = "$heading: $subtitle" }
             .height(height)
             .border(
@@ -313,6 +450,25 @@ private fun PrimaryMenuCard(
                     fontWeight = FontWeight.Normal,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+
+        if (showCompletedBadge) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(6.dp)
+                    .size(22.dp)
+                    .background(color = Color(0xFF1ED36A), shape = CircleShape) // Green
+                    .border(width = 1.5.dp, color = Color.White.copy(alpha = 0.9f), shape = CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "Grid calibrated",
+                    tint = Color.White,
+                    modifier = Modifier.size(14.dp)
                 )
             }
         }
